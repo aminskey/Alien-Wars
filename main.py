@@ -1,10 +1,8 @@
 import pygame, cv2
-import numpy as np
-
+import random, math
+import os, numpy as np
+import json
 from pygame.locals import *
-from random import randint, shuffle
-from os import listdir
-from math import cos, sin, atan, degrees, radians
 
 gameTitle = "Alien Wars"
 
@@ -13,7 +11,7 @@ screen = pygame.display.set_mode((900, 600), SCALED | FULLSCREEN)
 pygame.display.set_caption(gameTitle)
 
 clock = pygame.time.Clock()
-FPS = 60
+FPS=60
 
 playerGroup = pygame.sprite.Group()
 cloudsGroup1 = pygame.sprite.Group()
@@ -23,9 +21,12 @@ textGroup = pygame.sprite.Group()
 fireGroup = pygame.sprite.Group()
 healthBarGroup = pygame.sprite.Group()
 sporeGroup = pygame.sprite.Group()
-
+bgGroup = pygame.sprite.Group()
 
 allSprites = pygame.sprite.Group()
+
+bombSFX = pygame.mixer.Channel(1)
+bombSFX.set_endevent(pygame.USEREVENT)
 
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
@@ -38,30 +39,41 @@ class Cloud(pygame.sprite.Sprite):
     def __init__(self, type="cloud", image=None):
         super().__init__()
         if image != None:
-            self.image = pygame.image.load(f"levels/bgObjects/{image}.png")
+            self.image = pygame.image.load(f"levels/fgObjects/{image}.png")
         else:
-            objects = listdir(f"levels/bgObjects/{type}")
-            self.image = pygame.image.load(f"levels/bgObjects/{type}/{objects[randint(0, len(objects) - 1)]}")
+            objects = os.listdir(f"levels/fgObjects/{type}")
+            self.image = pygame.image.load(f"levels/fgObjects/{type}/{objects[random.randint(0, len(objects) - 1)]}")
         self.rect = self.image.get_rect()
 
-        self.rect.midbottom = (randint(0, screen.get_width()), randint(-screen.get_height(), 0))
+        self.rect.midbottom = (random.randint(0, screen.get_width()), random.randint(-screen.get_height(), 0))
     def update(self, speed=2):
         self.rect.y += speed
         if self.rect.midtop[1] > screen.get_height():
             self.rect.y = -self.image.get_height()
-            self.rect.x = randint(0, screen.get_width())
+            self.rect.x = random.randint(0, screen.get_width())
 
 
 class Ship(pygame.sprite.Sprite):
     def __init__(self, name):
         super().__init__()
-        self.image = pygame.image.load(f"player/{name}.png")
+        self.base_image = pygame.image.load(f"player/{name}.png")
+        self.image = self.base_image
+
         self.rect = self.image.get_rect()
         self.speed = 5
 
+        self.left_img = pygame.image.load(f"player/{name}-left.png")
+        self.right_img = pygame.image.load(f"player/{name}-right.png")
+
+        self.bombImg = pygame.image.load("misc/bomb-icon.png")
         self.cooldown = 5
         self.health = 100
         self.lives = 3
+        self.bombs = 5
+
+        self.bombCooldown = 20
+        self.bombSound = pygame.mixer.Sound("SFX/bomb_drop.wav")
+        self.bombDown = False
 
     def rectifyPos(self):
         if self.rect.midright[0] > screen.get_width() - 10:
@@ -84,34 +96,77 @@ class Ship(pygame.sprite.Sprite):
     def move(self, key_read, ver_keys=[K_LEFT, K_RIGHT], hor_keys=[K_UP, K_DOWN]):
         if key_read[ver_keys[0]]:
             self.rect.x -= self.speed
+            self.image = self.left_img
         if key_read[ver_keys[1]]:
             self.rect.x += self.speed
+            self.image = self.right_img
         if key_read[hor_keys[0]]:
             self.rect.y -= self.speed
         if key_read[hor_keys[1]]:
             self.rect.y += self.speed
 
+    def bombOnClick(self, inKeys, button=K_f):
+        if inKeys[button]:
+            if self.bombCooldown <= 0 and self.bombs > 0:
+                # Play drop sound effect
+                bombSFX.play(self.bombSound)
+
+                # has bomb been thrown??
+                self.bombDown = True
+
+                # set bombCooldown to zero
+                self.bombCooldown = 0
+        # If bomb has been thrown, and the amount of frames gone is equal to the length in seconds*fps of the song. Explode!!!
+        if self.bombCooldown < -self.bombSound.get_length()*FPS and self.bombDown:
+            # decrease num of bombs
+            self.bombs -= 1
+
+            # We are not throwing any more bombs
+            self.bombDown = False
+
+            # Cooldown to prevent spam
+            self.bombCooldown = 20
+
+            # Decrease health of every spore, and destroy every lazer object
+            for sprite in sporeGroup.sprites():
+                sprite.health = 0
+            for sprite in fireGroup.sprites():
+                sprite.kill()
+        else:
+            # if not, then decrease the cooldown further.
+            self.bombCooldown -= 1
+
     def printLifeCount(self, window=screen):
-        im_res = (self.image.get_width() // 1.2, self.image.get_height() // 1.2)
-        image = pygame.transform.scale(self.image, im_res)
+        im_res = (self.base_image.get_width() // 1.2, self.base_image.get_height() // 1.2)
+        image = pygame.transform.scale(self.base_image, im_res)
         for i in range(self.lives):
             window.blit(image,
-                        (window.get_width() - (i + 1) * image.get_width(), window.get_height() - image.get_height()))
+                        (i * image.get_width(), window.get_height() - image.get_height()*2))
+    def printBombCount(self, window=screen):
+        for i in range(self.bombs):
+            window.blit(self.bombImg, (i * self.bombImg.get_width(), 0))
     def update(self):
         keys = pygame.key.get_pressed()
+
         if keys[K_SPACE]:
             if self.cooldown <= 0:
                 self.fire()
                 self.cooldown = 5
         if self.cooldown > 0:
             self.cooldown -= 1
+        if self.bombCooldown > 0:
+            self.bombCooldown -= 1
+
+        self.bombOnClick(keys)
 
         if pygame.sprite.spritecollideany(self, sporeGroup):
-            self.health = 0
-            pygame.sprite.spritecollideany(self, sporeGroup).health = 0
+            sprite = pygame.sprite.spritecollideany(self, sporeGroup)
+            if not isinstance(sprite, Explosion):
+                self.health = 0
+                sprite.health = 0
 
         if self.health <= 0:
-            tmp = Explosion(explosion, 2, 1, self.rect.center)
+            tmp = Explosion(explosion, 2, 1, self.rect.center, False, "SFX/ship-explosion.wav")
             playerGroup.add(tmp)
 
             self.lives -= 1
@@ -119,29 +174,78 @@ class Ship(pygame.sprite.Sprite):
                 self.health = 100
             self.kill()
 
+        self.image = self.base_image
         self.move(keys)
         self.rectifyPos()
 
 class Level():
-    def __init__(self, scrollStrip, speed=5, cloudType="cloud-1", cloudDensity=15):
-        bg = pygame.image.load(scrollStrip)
-        wh_ratio = bg.get_height() // bg.get_width()
+    def __init__(self, level):
+        sporeDict = {
+            "Spore_1": Spore_1,
+            "Spore_3": Spore_3,
+            "Spore_4": Spore_4,
+        }
 
-        self.image = pygame.transform.scale(bg, (screen.get_width(), screen.get_height() * wh_ratio))
+        with open("levels/levelData.json", "r") as f:
+            file = json.load(f)
+            f.close()
+        data = file.get(level)
+
+        self.strip = pygame.image.load(data["bg_strip"])
+        self.wh_ratio = self.strip.get_height()/self.strip.get_width()
+        self.bgm = data["bgm"]
+        self.name = level
+
+        self.image = pygame.transform.scale(self.strip, (screen.get_width(), math.floor(screen.get_height()*self.wh_ratio)))
         self.rect = self.image.get_rect()
+        self.resetMountPoint()
 
+
+        self.speed = data["Level Speed"]
+        self.cloudDensity = data["cloudDensity"]
+        self.cloudType = data["cloudType"]
+
+        self.wave = []
+
+        for spore in data["wave"]:
+            if isinstance(spore, list):
+                sp_list = [sporeDict[sp] for sp in spore]
+                self.wave.append(sp_list)
+            else:
+                self.wave.append(sporeDict[spore])
+
+        print(self.wave)
+        self.waveTime = 30*FPS
+        self.waveIndex = 0
+    def resetMountPoint(self):
         self.rect.midbottom = screen.get_rect().midbottom
-        self.speed = speed
-        self.cloudDensity = cloudDensity
-        self.cloudType = cloudType
 
     def scroll(self):
+        if (self.rect.topleft[1] + screen.get_height()) >= 0:
+            self.resetMountPoint()
         self.rect.y += self.speed
-        if self.rect.topleft[1] > -25:
-            self.rect.midbottom = screen.get_rect().midbottom
 
-    def update(self):
+    def update(self, alphaVal=150):
         self.scroll()
+        self.image.set_alpha(alphaVal)
+
+class backgroundObject(pygame.sprite.Sprite):
+    def __init__(self, image=None, template="island", speedVector=pygame.math.Vector2(0, 0), pos=(0, 0)):
+        super().__init__()
+        if isinstance(image, str):
+            self.image = pygame.image.load(image)
+        else:
+            objects = os.listdir(f"levels/bgObjects/{template}")
+            random.shuffle(objects)
+            self.image = pygame.image.load(f"levels/bgObjects/{template}/{objects[0]}")
+        self.rect = self.image.get_rect()
+        self.vec = speedVector
+        self.rect.center = pos
+    def update(self):
+        self.rect.center += self.vec
+        if self.rect.midtop[1] > screen.get_height():
+            self.kill()
+
 
 class Text(pygame.sprite.Sprite):
     def __init__(self, msg, script, textColor, pos=(0, 0)):
@@ -186,7 +290,7 @@ class Lazer(pygame.sprite.Sprite):
             sprite = pygame.sprite.spritecollideany(self, self.oppGroup)
             if hasattr(sprite, "health"):
                 sprite.health -= self.damage
-            exp = Explosion(explosion, 2/(self.sizeFactor), 3, self.rect.center)
+            exp = Explosion(explosion, 2/(self.sizeFactor), 3, self.rect.center, sound="SFX/lazer-explosion.wav")
             fireGroup.add(exp)
             self.kill()
 
@@ -251,13 +355,19 @@ class Gun(pygame.sprite.Sprite):
         else:
             self.angleCheck = 0
         if not isInBounds(self.x_dist, 1, -1) and not isInBounds(self.y_dist, 1, -1):
-            self.angle = -degrees(atan(self.y_dist/self.x_dist)) + self.angleCheck
+            self.angle = -math.degrees(math.atan(self.y_dist/self.x_dist)) + self.angleCheck
 
     def fire(self, offset=pygame.math.Vector2(0, 0)):
+        exp = Explosion(explosion, 0.5, 2)
+
         tmp = Lazer(self.lazType, 5, speed=10, angle=self.angle, sizeFactor=3)
         tmp.rect.center = self.rect.center + offset
+        exp.rect.center = self.rect.center + offset
+
         tmp.sender = self.sender
         tmp.oppGroup = self.oppGroup
+
+        fireGroup.add(exp)
         fireGroup.add(tmp)
 
     def rotate(self):
@@ -314,6 +424,7 @@ class Spore_Generic(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.target = target
         self.sizeFactor = sizeFactor
+        self.oppGroup = playerGroup
 
         self.health = 50
         self.weaponType = weaponType
@@ -323,9 +434,31 @@ class Spore_Generic(pygame.sprite.Sprite):
         if not isInBounds(self.rect.centery, self.image.get_height() + screen.get_height(), -self.image.get_height(), self.image.get_height()//2):
             self.kill()
         if self.health <= 0:
-            tmp = Explosion(explosion, 1/self.sizeFactor, pos=self.rect.center)
+            tmp = Explosion(explosion, 3, pos=self.rect.center, sound="SFX/ship-explosion.wav")
             sporeGroup.add(tmp)
             self.kill()
+class Spore_1(Spore_Generic):
+    def __init__(self, *args):
+        super().__init__(args[0], 1, "bomb")
+        self.rect.midbottom = (random.randint(self.image.get_width(), screen.get_width() - self.image.get_width()), 0)
+
+        self.maxCool = 15
+        self.cooldown = 5
+    def fire(self):
+        tmp = Lazer(self.weaponType, 10, self.rect.midbottom, sizeFactor=2)
+        tmp.sender = self
+        tmp.oppGroup = playerGroup
+
+        fireGroup.add(tmp)
+        allSprites.add(tmp)
+    def update(self):
+        if self.cooldown > 0:
+            self.cooldown -= 1
+        else:
+            self.fire()
+            self.cooldown = self.maxCool
+        self.rect.centery += self.speed
+        super().update()
 class Spore_3(Spore_Generic):
     def __init__(self, target):
         super().__init__(target, 3, "bomb")
@@ -337,7 +470,13 @@ class Spore_3(Spore_Generic):
         self.maxCool = 100
         self.speed = 1
 
-        self.random_val = (randint(1, 10))/50
+        self.random_val = (random.randint(1, 10))/50
+        self.spawnPrep()
+    def spawnPrep(self):
+        self.direction = -1
+        self.rect.midtop = screen.get_rect().midbottom
+        self.rect.x = random.randint(screen.get_width()//6, screen.get_width() * 5//6)
+
     def get_dist(self):
         self.x_dist = self.target.rect.centerx - self.rect.centerx
         self.y_dist = self.target.rect.centery - self.rect.centery
@@ -348,7 +487,7 @@ class Spore_3(Spore_Generic):
             self.angleCheck = 0
 
         if not isInBounds(self.x_dist, 1, -1) and not isInBounds(self.y_dist, 1, -1):
-            self.angle = -degrees(atan(self.y_dist/self.x_dist)) + self.angleCheck
+            self.angle = -math.degrees(math.atan(self.y_dist/self.x_dist)) + self.angleCheck
     def fire(self):
         tmp = Lazer(self.weaponType, 20, self.rect.midbottom, 2, self.angle, 2)
         tmp.sender = self
@@ -357,6 +496,9 @@ class Spore_3(Spore_Generic):
         fireGroup.add(tmp)
         allSprites.add(tmp)
     def update(self):
+        if self.rect.midbottom[1] < 0:
+            self.kill()
+
         self.get_dist()
         self.get_angle()
         if self.coolDown < 0 and self.y_dist > 0:
@@ -364,30 +506,46 @@ class Spore_3(Spore_Generic):
             self.coolDown = self.maxCool
         else:
             self.coolDown -= 1
-        self.rect.centerx += 5*sin(self.rect.centery * self.random_val)
+        self.rect.centerx += 5*math.sin(self.rect.centery * self.random_val)
 
         self.rect.centery += self.speed*self.direction
         super().update()
 class Spore_4(Spore_Generic):
-    def __init__(self, direction=1, speed=5, gunAngle=-90):
-        super().__init__(None, 4, "standard", 0.5)
-        if direction < 0:
-            self.image = pygame.transform.rotate(self.image, 180)
-        self.direction = direction
-        self.gunAngle = gunAngle
+    def __init__(self, target, speed=5):
+        super().__init__(target, 4, "standard", 0.5)
+        self.direction = 1
+        self.gunAngle = 0
         self.speed = speed
         self.turrets = []
-        self.generateBarracks()
-        self.oppGroup = playerGroup
+        self.spawnPrep()
 
         for turret in self.turrets:
             turret.oppGroup = self.oppGroup
             turret.sender = self
 
-            turret.maxCool = randint(30, 60)
+            turret.maxCool = random.randint(30, 60)
 
             self.image.blit(turret.turret_frame, turret.frame_rect)
             self.image.blit(turret.image, turret.rect)
+    def spawnPrep(self):
+        tmpList = [1, -1]
+        random.shuffle(tmpList)
+
+        y = random.randint(0, screen.get_height())
+
+        self.direction = tmpList[0]
+        self.gunAngle = 90 if y > self.target.rect.y else -90
+        self.generateBarracks()
+
+        if self.direction < 0:
+            self.rect.midleft = (screen.get_width(), y)
+        elif self.direction > 0:
+            self.rect.midright = (0, y)
+
+        if self.direction < 0:
+            self.image = pygame.transform.rotate(self.image, 180)
+
+
     def fire(self):
         for gun in self.turrets:
             gun.update(fireOffset=pygame.math.Vector2(self.rect.topleft[0], self.rect.topleft[1]))
@@ -395,6 +553,12 @@ class Spore_4(Spore_Generic):
     def update(self):
         self.fire()
         self.rect.x += self.speed * self.direction
+        if self.direction > 0:
+            if self.rect.midleft[0] > screen.get_width():
+                self.kill()
+        elif self.direction < 0:
+            if self.rect.midright[0] < 0:
+                self.kill()
         super().update()
 
     def generateBarracks(self, num=10):
@@ -406,7 +570,7 @@ class Spore_4(Spore_Generic):
                 self.turrets.append(tmp)
 
 class Explosion(pygame.sprite.Sprite):
-    def __init__(self, seq, size=1, speed=1, pos=(0, 0), loop=False):
+    def __init__(self, seq, size=1, speed=1, pos=(0, 0), loop=False, sound=None):
         super().__init__()
         self.seq = []
         for img in seq:
@@ -414,6 +578,9 @@ class Explosion(pygame.sprite.Sprite):
             tmp = pygame.transform.scale(img, (w*size, h*size)).convert_alpha()
             tmp.set_colorkey(WHITE)
             self.seq.append(tmp)
+
+        if isinstance(sound, str):
+            pygame.mixer.Sound(sound).play()
 
         self.image = self.seq[0]
         self.rect = self.image.get_rect()
@@ -430,6 +597,27 @@ class Explosion(pygame.sprite.Sprite):
                 self.kill()
         else:
             self.image = self.seq[int(self.anim_index)]
+class Video():
+    def __init__(self, video):
+        self.video=video
+        self.maxFrames = len(self.video)
+        self.index = 0
+        self.alphaVal=255
+    def play(self, speed=1):
+        self.index += speed
+        if self.index >= self.maxFrames - 1:
+            self.index = 0
+        screen.blit(self.video[int(self.index)], (0, 0))
+        self.video[int(self.index)].set_alpha(self.alphaVal)
+    def setAlpha(self, alphaVal):
+        self.alphaVal=alphaVal
+    def fadeIn(self, inc):
+        if self.alphaVal <= 255:
+            self.alphaVal += inc
+    def fadeOut(self, inc):
+        if self.alphaVal > 0:
+            self.alphaVal -= inc
+
 def resizeImage(img, sizeFactor=2):
     return pygame.transform.scale(img, (img.get_width()//sizeFactor, img.get_height()//sizeFactor))
 
@@ -447,10 +635,10 @@ def drawScanlines(thickness, alpha, window):
 def meanValue(list):
     return sum(list)/len(list)
 
-def readVideo(file, window=0, resizeFactor=1, threshold=-1, colorKey=WHITE, MaxFrames=-1):
+def readVideo(file, window=None, threshold=-1, colorKey=WHITE, MaxFrames=-1, frameSkip=-1):
     video = cv2.VideoCapture(file)
     w, h = video.read()[1].shape[1::-1]
-    resize =  window.get_size() if type(window) == "pygame.surface.Surface" else (w//resizeFactor, h//resizeFactor)
+    resize = window.get_size() if isinstance(window, pygame.surface.Surface) else (w, h)
     seq = []
 
     frameCount = 0
@@ -461,35 +649,36 @@ def readVideo(file, window=0, resizeFactor=1, threshold=-1, colorKey=WHITE, MaxF
             break
 
         if threshold > 0:
-
-            '''
-            for i in range(frame.shape[0]):
-                for j in range(frame.shape[1]):
-                    frame[i, j] = [meanValue(frame[0, i, j]), meanValue(frame[0, i, j]), meanValue(frame[0, i, j])]
-            '''
             copy = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             newImg = np.zeros_like(copy)
             newImg[copy > threshold] = copy[copy > threshold]
             frame = cv2.cvtColor(newImg, cv2.COLOR_GRAY2BGR)
 
-
-        tmp = pygame.image.frombuffer(frame.tobytes(), frame.shape[1::-1], "BGR").convert_alpha()
-        tmp = pygame.transform.scale(tmp, resize)
-        tmp.set_colorkey(colorKey)
-        seq.append(tmp)
+        if frameCount >= frameSkip:
+            tmp = pygame.image.frombuffer(frame.tobytes(), frame.shape[1::-1], "BGR").convert_alpha()
+            tmp = pygame.transform.scale(tmp, resize)
+            tmp.set_colorkey(colorKey)
+            seq.append(tmp)
         frameCount += 1
 
         if MaxFrames > 0:
             if frameCount > MaxFrames:
                 break
-
     return seq
 
-lev = Level("levels/debri-field.png", 2, "meteor", 6)
-earth = Level("levels/earth.png", 2, "cloud", 12)
+#lev = Level("levels/debri-field.png", 2, "meteor", 6)
+earth = Level("earth")
 explosion = readVideo("misc/explosion.gif")
-vhs_filter = readVideo("misc/VHS-Layer.gif")
-menu_vid = readVideo("video/earth.mp4", screen, MaxFrames=630)
+vhs_filter = readVideo("misc/VHS-Layer.gif", screen, threshold=15, colorKey=BLACK)
+
+clickEffect = pygame.mixer.Sound("SFX/cursor.wav")
+
+vhs_vid = Video(vhs_filter)
+players = [
+    "avalanche",
+    "bullseye",
+    "cobra"
+]
 
 
 def healthTest(num, max=3):
@@ -592,10 +781,132 @@ def fireTest():
         pygame.display.update()
         clock.tick(30)
 
+def printLoadingScreen():
+    font = pygame.font.Font("fonts/planet_joust_ownjx.otf", 50)
+    title = Text("Loading....", font, GREEN, screen.get_rect().center)
+
+    screen.fill(BLACK)
+    screen.blit(title.image, title.rect)
+
+    pygame.display.update()
+
+# Submenu. Menu for player selection
+def playerSelect():
+    printLoadingScreen()
+
+    bg = Video(readVideo("video/player_select.mp4", screen))
+    shadeLayer = pygame.Surface(screen.get_size())
+    shadeLayer.fill(BLACK)
+    shadeLayer.set_alpha(50)
+
+    # Creating font for title and cursor
+    titleFont = pygame.font.Font("fonts/planet_joust_ownjx.otf", 75)
+    cursorFont = pygame.font.Font("fonts/ChargeVector.ttf", 25)
 
 
+    shipObjs = [Ship(name) for name in players]
+    for i in range(len(shipObjs)):
+        ship = shipObjs[i]
+        ship.rect.centerx = (i+1) * screen.get_width()/(len(shipObjs)+1)
+        ship.rect.y = screen.get_height()
+
+    nameplates = [Text(name, cursorFont, GREEN) for name in players]
+
+    # creating image using Text Class
+    title = Text("Select Ship", titleFont, WHITE)
+    cursor = Text("#", cursorFont, GREEN)
+    cursor.image.fill(GREEN)
+    cursor.image = pygame.transform.scale_by(cursor.image, 0.85)
+
+    # Positioning title screen for animation.
+    title.rect.midbottom = screen.get_rect().midtop
+
+    # Animation speed and acceleration with 1D vectoral quantities
+    # title Animation
+    titleSpd = 5
+    titleAcc = calc_Accel(title.rect.midtop[1], screen.get_rect().midtop[1], titleSpd, 0)
+
+    # Ships animations.
+    shipSpd = -15
+    shipAcc = calc_Accel(shipObjs[0].rect.centery, screen.get_height()//2, shipSpd, 0)
+
+    # index to traverse ships by
+    index = 0
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                exit()
+            if event.type == pygame.KEYDOWN:
+                clickEffect.play()
+
+                if event.key == pygame.K_LEFT:
+                    index -= 1
+                    break
+                if event.key == pygame.K_RIGHT:
+                    index += 1
+                    break
+                if event.key == pygame.K_ESCAPE:
+                    startScreen()
+                    exit()
+                if event.key == pygame.K_RETURN:
+                    pygame.mixer.music.stop()
+                    pygame.mixer.music.unload()
+
+                    main(earth, shipObjs[index])
+                    startScreen()
+                    exit()
+
+
+        # Animating the title screen
+        title.rect.y += titleSpd
+
+        # play background video
+        bg.play(1)
+
+        # Updating speed
+        if titleSpd > 0:
+            titleSpd += titleAcc
+
+        # same for ships.
+        for i in range(len(shipObjs)):
+            # Drawing ships.
+            ship = shipObjs[i]
+            name = nameplates[i]
+
+            name.rect.midtop = ship.rect.midbottom
+
+            screen.blit(ship.image, ship.rect)
+            screen.blit(name.image, name.rect)
+            ship.rect.y += shipSpd
+
+        if shipSpd < 0:
+            shipSpd += shipAcc
+
+        if index > len(nameplates) - 1:
+            index = 0
+        if index < 0:
+            index = len(nameplates) - 1
+
+        cursor.rect.midright = nameplates[index].rect.midleft
+        cursor.blink()
+
+        screen.blit(cursor.image, cursor.rect)
+
+        screen.blit(title.image, title.rect)
+        screen.blit(shadeLayer, (0, 0))
+        drawScanlines(1, 150, screen)
+
+        pygame.display.update()
+        clock.tick(30)
+
+# The main menu
 def startScreen():
-    favicon = pygame.image.load("misc/earth-planet.png")
+    pygame.mixer.music.load("BGM/startscreen.ogg")
+    pygame.mixer.music.play(-1)
+    printLoadingScreen()
+
+    favicon = pygame.image.load("levels/icons/earth-planet.png")
     favicon = pygame.transform.scale_by(favicon, screen.get_width()/favicon.get_width())
     f_rect = favicon.get_rect()
     f_rect.center = screen.get_rect().midright
@@ -623,21 +934,20 @@ def startScreen():
     cursor.image = pygame.transform.scale_by(cursor.image, 0.85)
     textGroup.add(cursor)
 
-    moveEffect = pygame.mixer.Sound("SFX/cursor.wav")
-
     alphaVal = 50
 
     shadow = pygame.Surface(screen.get_size())
     shadow.fill(BLACK)
     shadow.set_alpha(alphaVal)
 
-    frameIndex = 0
+    menu_vid = readVideo("video/earth.mp4", screen, MaxFrames=50 * 15.05, frameSkip=10)
+    planet_vid = Video(menu_vid)
 
     options = [start, menu, indev, quit]
     opIndex = 0
     i = 0
     selectMode = False
-    acc = 4
+    acc = 5
     speed = 0
 
     for option in options:
@@ -651,9 +961,9 @@ def startScreen():
                 pygame.quit()
                 exit()
             if event.type == pygame.KEYUP:
-                moveEffect.stop()
+                clickEffect.stop()
             if event.type == pygame.KEYDOWN:
-                moveEffect.play()
+                clickEffect.play()
                 if event.key == pygame.K_DOWN:
                     if opIndex < len(options) - 1:
                         opIndex += 1
@@ -671,18 +981,14 @@ def startScreen():
                         selectMode = True
                     break
 
-        if frameIndex >= len(menu_vid) - 1:
-            frameIndex = 0
-        frameIndex += 1
-
         if selectMode:
-            i=len(textGroup.sprites())
+            i=0
             for sprite in textGroup.sprites():
-                if sprite.rect.midright[0] > -20:
-                    sprite.rect.x -= speed * (i+1)
+                if sprite.rect.midtop[1] < screen.get_height():
+                    sprite.rect.y += speed * (i+2)
                 else:
                     sprite.kill()
-                i -= 1
+                i += 1
             if speed < 20:
                 speed += acc
             alphaVal += speed
@@ -690,6 +996,9 @@ def startScreen():
 
             if (len(textGroup.sprites())) <= 0:
                 if options[opIndex] == start:
+                    pygame.mixer.music.stop()
+                    pygame.mixer.music.unload()
+
                     main(earth, Ship("cobra"))
                     startScreen()
                     exit()
@@ -697,7 +1006,7 @@ def startScreen():
                     pygame.quit()
                     exit()
                 elif options[opIndex] == indev:
-                    turretTest()
+                    playerSelect()
                     startScreen()
                     exit()
                 else:
@@ -708,20 +1017,20 @@ def startScreen():
         cursor.rect.midright = options[opIndex].rect.midleft
         cursor.blink()
 
-        #screen.blit(favicon, f_rect)
-        screen.blit(menu_vid[int(frameIndex)], (0, 0))
+        planet_vid.play()
         screen.blit(shadow, (0, 0))
 
         textGroup.draw(screen)
-        drawScanlines(2, 150, screen)
+        drawScanlines(1, 200, screen)
 
         pygame.display.update()
         clock.tick(30)
 
+# Calculate 1D acceleration of an object given start/end distance and start/end speed
 def calc_Accel(start_point, end_point, start_speed, end_speed):
     return (end_speed**2 - start_speed**2)/(2*(end_point - start_point))
 
-
+# The main mechanics of the game.
 def main(level, ship):
     ship.rect.center = screen.get_rect().center
     playerGroup.add(ship)
@@ -761,9 +1070,15 @@ def main(level, ship):
     shade_layer.fill(BLACK)
     shade_layer.set_alpha(50)
 
-    level.image.set_alpha(150)
+    bgNoise = pygame.mixer.Sound("SFX/radio-noise.wav")
+    sfxChannel = pygame.mixer.Channel(0)
+    sfxChannel.play(bgNoise)
+
+    pygame.mixer.music.load(level.bgm)
+    pygame.mixer.music.play(-1)
 
     count = 0
+    fadeVal = 2
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -775,46 +1090,54 @@ def main(level, ship):
                         sprite.kill()
                     for sprite in allClouds.sprites():
                         sprite.kill()
-                    level.rect.midbottom = screen.get_rect().midbottom
+                    sfxChannel.stop()
+                    level.resetMountPoint()
                     startScreen()
                     exit()
-
         if count % (FPS * 5) == 0:
-            y = randint(0, screen.get_height() * 5 // 6)
-            list = [1, -1]
-            direction = list[randint(0, 1)]
-            angle = 90 if y > ship.rect.y else -90
-            spore = Spore_4(direction, 2, angle)
-            if direction > 0:
-                spore.rect.topright = (screen.get_rect().midleft[0], y)
-            else:
-                spore.rect.topleft = (screen.get_rect().midright[0], y)
+            wave = level.wave[level.waveIndex]
 
-            sporeGroup.add(spore)
-            allSprites.add(spore)
+            for sporeObj in wave:
+                spore = sporeObj(ship)
+                sporeGroup.add(spore)
+                allSprites.add(spore)
+        if count % level.waveTime == 0:
+            if level.waveIndex >= len(level.wave) - 1:
+                level.waveIndex = 0
+            level.waveIndex += 1
 
-        if count % (FPS * 15) == 0:
-            spore = Spore_3(ship)
-            spore.rect.midtop = screen.get_rect().midbottom
-            spore.direction = -1
 
-            sporeGroup.add(spore)
-            allSprites.add(spore)
+        if len(fireGroup.sprites()) > 30:
+            fireGroup.sprites()[0].kill()
 
         if len(playerGroup.sprites()) <= 0:
             if ship.lives > 0:
+                for sprite in sporeGroup.sprites():
+                    sprite.health = 0
+
                 ship.rect.midbottom = screen.get_rect().midbottom
                 playerGroup.add(ship)
                 allSprites.add(ship)
             else:
+                if not gameOver:
+                    pygame.mixer.music.stop()
+                    pygame.mixer.music.unload()
+                    pygame.mixer.music.load("BGM/gameOver.ogg")
+                    pygame.mixer.music.play()
                 gameOver = True
+
 
         level.update()
         playerGroup.update()
         sporeGroup.update()
         fireGroup.update()
-        allClouds.update(speed=3)
+        bgGroup.update()
+        allClouds.update(speed=level.speed+1)
         healthBarGroup.update()
+        if not gameOver:
+            vhs_vid.fadeOut(fadeVal)
+            if bgNoise.get_volume() > 0:
+                bgNoise.set_volume(bgNoise.get_volume()-(fadeVal/4)*10**-2)
 
         screen.fill(BLACK)
         screen.blit(level.image, level.rect)
@@ -826,6 +1149,7 @@ def main(level, ship):
         cloudsGroup1.draw(screen)
         healthBarGroup.draw(screen)
         ship.printLifeCount()
+        ship.printBombCount()
 
         if gameOver:
             if subSpeed > 0:
@@ -844,6 +1168,7 @@ def main(level, ship):
             screen.blit(sideMsg.image, sideMsg.rect)
 
         drawScanlines(2, 50, screen)
+        vhs_vid.play()
 
         pygame.display.update()
         clock.tick(FPS)
