@@ -1,0 +1,94 @@
+{
+  "levels": {
+    "Earth": {
+      "bg_strip": "levels/levelStrips/earth.png",
+      "bgm": "BGM/earth-lev1.ogg",
+      "Level Speed": 4,
+      "cloudDensity": 10,
+      "cloudType": "cloud",
+      "icon": "levels/icons/earth-planet.png",
+      "add later": [
+        ["Spore_4", "Spore_2", "Spore_2"],
+        ["Spore_4", "Spore_3"],
+        ["Spore_3", "Spore_2", "Spore_2"]
+      ],
+      "wave": [
+        ["Spore_2", "Spore_2", "Spore_2"]
+      ],
+      "briefing": [
+        "\\C L A S S I F I E D           M I S S I O N^",
+        "Code Name: Operation Sharp Sweep",
+        "",
+        "Situation Overview:",
+        "The enemy has attacked us, leaving us with no option,",
+        "but to @engage^ and @destroy^",
+        "The main entity causing this trouble is Premature_1",
+        "Well known for its ability to act as a supreme ruler, or queen bee.",
+        "Take it down by all means necessary",
+        "",
+        "Mission Area:",
+        "             \\Earth^",
+        "Primary Target:",
+        "             \\Premature_1^",
+        "             Classified as a @high-threat^ entity with advanced",
+        "             tactical capabilities.",
+        "Accept Mission [ENTER]?"
+      ],
+      "boss": "Premature_1",
+      "boss_bgm": "BGM/boss-1.ogg"
+    },
+    "Debris Field": {
+      "bg_strip": "levels/levelStrips/debri-field.png",
+      "bgm": "BGM/debri-lev2.ogg",
+      "Level Speed": 5,
+      "cloudDensity": 5,
+      "cloudType": "meteor",
+      "icon": "levels/icons/meteor.png",
+      "wave": [
+        ["Spore_1", "Spore_1", "Spore_1"],
+        ["Spore_3", "Spore_1", "Spore_2"],
+        ["Spore_1", "Spore_2"],
+        ["Spore_3", "Spore_1", "Spore_2"]
+      ],
+      "briefing": [
+        "\\C L A S S I F I E D           M I S S I O N^",
+        "Code Name: Operation Eclipse Defender",
+        "",
+        "Situation Overview:",
+        "Intel has gathered information regarding the renegade aliens",
+        "also referred to as @Spores^. They are a dominating alien race",
+        "led by group leaders, known as @Prematures^, who eradicate their prey.",
+        "We must extinguish them at all costs",
+        "Another sighting of the @Premature_1^ has been reported recently",
+        "You know the drill. Take it down!!",
+        "",
+        "Mission Area:",
+        "             \\Debris Field^",
+        "Primary Target:",
+        "             \\Premature_1^",
+        "             Classified as a @high-threat^ entity with advanced",
+        "             tactical capabilities.",
+        "Accept Mission [ENTER]?"
+      ],
+      "boss": "Premature_1",
+      "boss_bgm": "BGM/boss-1.ogg"
+    }
+  },
+  "players": {
+    "cobra": {
+      "weaponType": "standard",
+      "damage": 5,
+      "bombDamage": 20
+    },
+    "avalanche": {
+      "weaponType": "blue",
+      "damage": 6,
+      "bombDamage": 17
+    },
+    "bullseye": {
+      "weaponType": "standard",
+      "damage": 3,
+      "bombDamage": 24
+    }
+  }
+}
