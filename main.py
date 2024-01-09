@@ -114,7 +114,6 @@ class Player(pygame.sprite.Sprite):
         if self.rect.midbottom[1] > screen.get_height() - 10:
             self.rect.y -= self.speed * 2
     def fire(self):
-        #pygame.mixer.Sound('SFX/Laser.wav').play()
         tmp = Lazer(self.weaponType, damage=self.damage, mount_point=self.rect.midtop, sizeFactor=0.2, speed=15)
         tmp.sender = self
         tmp.oppGroup = sporeGroup
@@ -163,16 +162,20 @@ class Player(pygame.sprite.Sprite):
                     boom = Explosion(explosion, 1, 1, sprite.rect.center)
                     sporeGroup.add(boom)
 
+                    # does the sprite have a health tag??
                     if hasattr(sprite, "health"):
-                        sprite.health -= self.bombDamage
+                        # checking if the sprite is invincable or not
+                        if not hasattr(sprite, "invincable"):
+                            # if not then deal damage
+                            sprite.health -= self.bombDamage
+                        # is the sprite a coherent to a premature??
+                        if hasattr(sprite, "premature"):
+                            # if so then deal damage to main body.
+                            sprite.premature.health -= self.bombDamage
+                        # if the sprite dies, then increase the killers points.
                         if sprite.health <= 0:
                             self.points += sprite.points
-                    if hasattr(sprite, "premature"):
-                        if not sprite.invincible:
-                            sprite.health -= self.bombDamage - 2
-                            sprite.premature.health -= self.bombDamage - 2
-                            if sprite.health <= 0:
-                                self.points += sprite.points
+            # kill all sprites in fireGroup (such as bombs and lazers)
             for sprite in fireGroup.sprites():
                 sprite.kill()
         else:
@@ -264,13 +267,13 @@ class Level():
             else:
                 self.wave.append(sporeDict[spore])
 
-        self.waveTime = 15*FPS
+        self.waveTime = 20*FPS
         self.waveIndex = 0
     def resetMountPoint(self):
         self.rect.midbottom = screen.get_rect().midbottom
 
     def scroll(self):
-        if (self.rect.topleft[1] + screen.get_height()) >= 0:
+        if self.rect.topleft[1] > 0:
             self.resetMountPoint()
         self.rect.y += self.speed
 
@@ -297,9 +300,22 @@ class backgroundObject(pygame.sprite.Sprite):
 
 
 class Text(pygame.sprite.Sprite):
-    def __init__(self, msg, script, textColor, pos=(0, 0)):
+    def __init__(self, msg, script, textColor, pos=(0, 0), shadow=False):
         super().__init__()
-        self.image = script.render(msg, None, textColor)
+
+        img = script.render(msg, None, textColor)
+        if not shadow:
+            self.image = img.copy()
+        else:
+            self.image = pygame.Surface((img.get_width()*1.02, img.get_height()*1.02)).convert_alpha()
+            self.image.fill((23, 16, 1))
+            self.image.set_colorkey((23, 16, 1))
+            shadowText = Text(msg, script, BLACK)
+            shadowText.rect.topleft = (3, 2)
+
+            self.image.blit(shadowText.image, shadowText.rect)
+            self.image.blit(img, (0, 0))
+
         self.rect = self.image.get_rect()
         self.color = textColor
         self.rect.center = pos
@@ -339,18 +355,14 @@ class Lazer(pygame.sprite.Sprite):
 
         if pygame.sprite.spritecollideany(self, self.oppGroup):
             sprite = pygame.sprite.spritecollideany(self, self.oppGroup)
-            if isinstance(self.sender, Player):
-                if hasattr(sprite, "health"):
-                    sprite.health -= self.damage
-                    if sprite.health <= 0:
-                        self.sender.points += sprite.points
+            if hasattr(sprite, "health"):
                 if hasattr(sprite, "premature"):
                     if not sprite.invincible:
-                        sprite.health -= self.damage
                         sprite.premature.health -= self.damage
-                        if sprite.health <= 0:
-                            self.sender.points += sprite.points
-            #exp = Explosion(explosion, self.sizeFactor, 3, self.rect.center, sound="SFX/lazer-explosion.wav")
+                sprite.health -= self.damage
+                if sprite.health <= 0:
+                    if hasattr(self.sender, "points"):
+                        self.sender.points += sprite.points
             exp = Explosion(explosion, self.sizeFactor, 3, self.rect.center)
             fireGroup.add(exp)
             self.kill()
@@ -532,7 +544,7 @@ class OneUp(PowerUp):
         super().update()
 class Wingman(Player):
     def __init__(self, player):
-        super().__init__(player.name, player.weaponType, player.damage)
+        super().__init__(player.name)
         self.base_image = pygame.transform.scale_by(player.base_image, 0.75)
         self.left_img = pygame.transform.scale_by(player.left_img, 0.75)
         self.right_img = pygame.transform.scale_by(player.right_img, 0.75)
@@ -632,8 +644,9 @@ class Premature_1():
         self.body.image.blit(self.main_gun.turret_frame, self.main_gun.frame_rect)
         self.body.rect.midbottom = screen.get_rect().midtop
         self.body.invincible = True
+        self.body.health = 500
 
-        self.maxHealth = 100
+        self.maxHealth = self.body.health
 
         self.maxCool = 100
         self.coolDown = 5
@@ -667,6 +680,8 @@ class Premature_1():
             sporeGroup.add(tmp)
 
     def update(self):
+        print(self.body.health, self.health)
+
         if self.ligaments <= 0:
             self.body.invincible = False
 
@@ -956,6 +971,42 @@ class Video():
     def fadeOut(self, inc):
         if self.alphaVal > 0:
             self.alphaVal -= inc
+class SpecsCard(pygame.sprite.Sprite):
+    def __init__(self, playerObj):
+        super().__init__()
+
+        self.image = pygame.Surface((screen.get_width() * 2//3, screen.get_height() * 1//2 + 50))
+        self.image.fill((31, 0, 31))
+        self.image.set_colorkey((31, 0, 31))
+        self.rect = self.image.get_rect()
+
+        self.titleFont = pygame.font.Font("fonts/SolomonsKey.ttf", 50)
+        self.statFont = pygame.font.Font("fonts/SolomonsKey.ttf", 16)
+        self.statColor = (128, 207, 72)
+
+        self.playerObj = playerObj
+        self.shipImg = pygame.transform.scale(self.playerObj.image.copy(), (self.image.get_width()//2 - 20, self.image.get_height() * 3//4))
+        self.shipRect = self.shipImg.get_rect()
+        self.shipRect.bottomleft = (10, self.image.get_height() - 25)
+
+        self.title = Text(self.playerObj.name, self.titleFont, BLUE)
+        self.weaponType = Text(f"Weapon: {self.playerObj.weaponType}", self.statFont, self.statColor)
+        self.damageAmnt = Text(f"Weapon Damage: {self.playerObj.damage}", self.statFont, self.statColor)
+        self.bombDamage = Text(f"Bomb Damage: {self.playerObj.bombDamage}", self.statFont, self.statColor)
+
+        text = [self.weaponType, self.damageAmnt, self.bombDamage]
+
+        self.title.rect.topleft = (10, 20)
+        self.image.blit(self.shipImg, self.shipRect)
+        self.image.blit(self.title.image, self.title.rect)
+
+        i = 2
+        for line in text:
+            line.rect.topleft = (self.image.get_width()//2, self.image.get_height() * (i)//(len(text)+4))
+            self.image.blit(line.image, line.rect)
+            i += 1
+
+
 
 
 def isInBounds(x, big, small, offset=0):
@@ -1003,65 +1054,33 @@ def readVideo(file, window=None, threshold=-1, colorKey=WHITE, MaxFrames=-1, fra
                 break
     return seq
 
-#lev = Level("levels/debri-field.png", 2, "meteor", 6)
-earth = Level("Earth")
+# Load the explosion gif
 explosion = readVideo("misc/explosion.gif")
-vhs_filter = readVideo("misc/VHS-Layer.gif", screen, threshold=15, colorKey=BLACK)
 
+# Load all the levels form the gameData.json file
 levels = [Level(levelName) for levelName in gameData.get("levels")]
 
+# Load sfx for clicking
 clickEffect = pygame.mixer.Sound("SFX/cursor.wav")
 
-vhs_vid = Video(vhs_filter)
+# name of players
 players = [
     "avalanche",
     "bullseye",
     "cobra"
 ]
 
+# Which keys to use (see def showKeyMapping())
 keymapping = [
     ["misc/key-1.png", "Fire bombs"],
     ["misc/key-2.png", "Arrow Keys to move"],
     ["misc/key-3.png", "Space to fire lazer"]
 ]
 
+# define different types fo powerups
 powerUpTypes = [Heal, OneUp, Bomb, WingUp]
 
-def healthTest(num, max=3):
-    if num > 0:
-        num -= 1
-    else:
-        num = max
-    return num
-
-
-def sporeTest():
-    spore = Spore_4()
-    spore.rect.center = screen.get_rect().center
-
-    while True:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                exit()
-            if event.type == pygame.KEYDOWN:
-                for sprite in fireGroup:
-                    sprite.kill()
-                startScreen()
-                exit()
-
-        spore.update()
-        fireGroup.update()
-
-        screen.fill(BLACK)
-        fireGroup.draw(screen)
-        screen.blit(spore.image, spore.rect)
-
-        pygame.display.update()
-        clock.tick(30)
-
-
-
+# Testing the turret on the premature. Does the logic work??
 def turretTest():
     dummy = dummySprite()
     prema_1 = Premature_1(dummy, 3, allSprites)
@@ -1105,35 +1124,7 @@ def turretTest():
         pygame.display.update()
         clock.tick(30)
 
-def fireTest():
-    angle = 0
-
-    while True:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                exit()
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_RETURN:
-                    tmp = Lazer(mount_point=screen.get_rect().center, speed=20, angle=angle)
-                    fireGroup.add(tmp)
-                    break
-                if event.key == pygame.K_LEFT:
-                    angle += 10
-                    break
-                if event.key == pygame.K_RIGHT:
-                    angle -= 10
-                    break
-
-
-        fireGroup.update()
-
-        screen.fill((0, 0, 0))
-        fireGroup.draw(screen)
-
-        pygame.display.update()
-        clock.tick(30)
-
+# print a loading screen, mostly used when loading gifs.
 def printLoadingScreen():
     font = pygame.font.Font("fonts/planet_joust_ownjx.otf", 50)
     title = Text("Loading....", font, GREEN, screen.get_rect().center)
@@ -1143,17 +1134,22 @@ def printLoadingScreen():
 
     pygame.display.update()
 
+# Show the keymappping
 def showKeyMapping():
+    # Loading fonts..
     font = pygame.font.Font("fonts/windows_command_prompt.ttf", 25)
     msgFont = pygame.font.Font("fonts/ChargeVector.ttf", 40)
 
+    # Creating text images..
     msg = Text("Press Any key to continue", msgFont, WHITE)
     msg.rect.midtop = (screen.get_width()//2, screen.get_height() * 3//4)
 
     keyDisplay = []
 
+    # set a timer for 3 seconds
     timer = 3*30
 
+    # Position the images and text
     i = 0
     for item in keymapping:
         img = pygame.image.load(item[0])
@@ -1174,6 +1170,7 @@ def showKeyMapping():
 
         i += 1
 
+    # display keymapping
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -1197,26 +1194,31 @@ def showKeyMapping():
         pygame.display.update()
         clock.tick(30)
 
-
+# Mission briefing...
 def briefingRoom(player, advance=False):
+    # Load music
     pygame.mixer.music.load("BGM/briefing-2.ogg")
     pygame.mixer.music.play(-1)
 
     icons = []
     names = []
 
+    # Load ship image
     shipImg = pygame.transform.rotate(player.left_img, -90)
     shipRect = shipImg.get_rect()
 
+    # Used to make bg dark
     shadeLayer = pygame.Surface(screen.get_size())
     shadeLayer.fill(BLACK)
     shadeLayer.set_alpha(100)
 
+    # Load fonts
     levelFont = pygame.font.Font("fonts/ChargeVector.ttf", 25)
     letterFont = pygame.font.Font("fonts/windows_command_prompt.ttf", 25)
     titleFont = pygame.font.Font("fonts/windows_command_prompt.ttf", 70)
     MapFont = pygame.font.Font("fonts/planet_joust_ownjx.otf", 70)
 
+    # Place icons
     for level in levels:
         # if the icon image is to big, then shrink it
         if sum(level.icon.get_size()) > 200:
@@ -1246,9 +1248,13 @@ def briefingRoom(player, advance=False):
     # Done with mission briefing?
     briefingDone = False
 
+
     # if prev mission completed, advance.
     if advance:
-        player.levelIndex += 1
+        if not player.levelIndex >= len(levels) - 1:
+            player.levelIndex += 1
+
+    currentLevel = levels[player.levelIndex]
 
     # cursor for briefing..
     cursor = Text("#", letterFont, GREEN)
@@ -1260,7 +1266,8 @@ def briefingRoom(player, advance=False):
 
     # prepare letters for briefing
     letters = []
-    currentLevel = levels[player.levelIndex]
+
+    # parse briefing message in gameData.json
     i = 0
     color = GREEN
     for line in currentLevel.briefing:
@@ -1288,8 +1295,7 @@ def briefingRoom(player, advance=False):
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_RETURN and briefingDone:
                     showKeyMapping()
-                    main(currentLevel, player)
-                    exit()
+                    main(levels[player.levelIndex], player)
                 if event.key == pygame.K_ESCAPE and briefingDone:
                     startScreen()
                     exit()
@@ -1300,10 +1306,11 @@ def briefingRoom(player, advance=False):
         # Color the screen black.
         screen.fill(BLACK)
 
-        if title.rect.bottomleft[1] > 0:
-            screen.blit(title.image, title.rect)
-        if count <= 0:
-            title.rect.y -= 10
+        if not briefing:
+            if title.rect.bottomleft[1] > 0:
+                screen.blit(title.image, title.rect)
+            if count <= 0:
+                title.rect.y -= 10
 
         for icon in icons:
             name = names[icons.index(icon)]
@@ -1347,17 +1354,17 @@ def briefingRoom(player, advance=False):
             screen.blit(shipImg, shipRect)
 
         if briefing:
+            msgChannel.play(clickEffect)
             if letterIndex < len(letters) - 1:
                 letterIndex += 1
-
-            msgChannel.play(clickEffect)
-            if letterIndex >= len(letters) - 1:
+            else:
                 msgChannel.pause()
                 briefingDone = True
 
+
             screen.blit(briefingTitle.image, briefingTitle.rect)
 
-            for char in letters[:int(letterIndex)+1]:
+            for char in letters[:int(letterIndex)]:
                 screen.blit(char.image, char.rect)
 
 
@@ -1371,7 +1378,7 @@ def briefingRoom(player, advance=False):
         drawScanlines(1, 50, screen)
 
         pygame.display.update()
-        clock.tick(30)
+        clock.tick(45)
 
 
 # Submenu. Menu for player selection
@@ -1381,38 +1388,28 @@ def playerSelect():
     bg = Video(readVideo("video/player_select.mp4", screen))
     shadeLayer = pygame.Surface(screen.get_size())
     shadeLayer.fill(BLACK)
-    shadeLayer.set_alpha(50)
+    shadeLayer.set_alpha(125)
 
     # Creating font for title and cursor
     titleFont = pygame.font.Font("fonts/planet_joust_ownjx.otf", 75)
-    cursorFont = pygame.font.Font("fonts/ChargeVector.ttf", 25)
 
-
-    playerObjs = [Player(name, type, damage) for name, type, damage in players]
-    for i in range(len(playerObjs)):
-        ship = playerObjs[i]
-        ship.rect.centerx = (i+1) * screen.get_width()/(len(playerObjs)+1)
-        ship.rect.y = screen.get_height()
-
-    nameplates = [Text(name, cursorFont, GREEN) for name, _, _ in players]
+    # Creating Player Objects for game
+    cards = [SpecsCard(Player(name)) for name in players]
+    cards[0].rect.midtop = screen.get_rect().midbottom
 
     # creating image using Text Class
     title = Text("Select Ship", titleFont, WHITE)
-    cursor = Text("#", cursorFont, GREEN)
-    cursor.image.fill(GREEN)
-    cursor.image = pygame.transform.scale_by(cursor.image, 0.85)
 
     # Positioning title screen for animation.
     title.rect.midbottom = screen.get_rect().midtop
 
     # Animation speed and acceleration with 1D vectoral quantities
     # title Animation
+    cardSpd =-15
     titleSpd = 5
-    titleAcc = calc_Accel(title.rect.midtop[1], screen.get_rect().midtop[1], titleSpd, 0)
 
-    # Ships animations.
-    shipSpd = -15
-    shipAcc = calc_Accel(playerObjs[0].rect.centery, screen.get_height()//2, shipSpd, 0)
+    cardAcc = calc_Accel(cards[0].rect.centery, screen.get_height()//2, cardSpd, 0)
+    titleAcc = calc_Accel(title.rect.midtop[1], screen.get_rect().midtop[1], titleSpd, 0)
 
     # index to traverse ships by
     index = 0
@@ -1439,9 +1436,14 @@ def playerSelect():
                 if event.key == pygame.K_RETURN:
                     select = True
 
+        if index > len(cards) - 1:
+            index = 0
+        if index < 0:
+            index = len(cards) - 1
 
         # Animating the title screen
         title.rect.y += titleSpd
+        cards[0].rect.y += cardSpd
 
         # play background video
         bg.play(1)
@@ -1450,49 +1452,21 @@ def playerSelect():
         if not select:
             if titleSpd > 0:
                 titleSpd += titleAcc
-            if shipSpd < 0:
-                shipSpd += shipAcc
+            if cardSpd < 0:
+                cardSpd += cardAcc
         else:
             titleSpd += titleAcc
-            shipSpd += shipAcc
+            cardSpd += cardAcc
 
-            if playerObjs[0].rect.y > screen.get_height() and title.rect.bottomleft[1] < 0:
-                #pygame.mixer.music.stop()
-                #pygame.mixer.music.unload()
-
+            if cards[0].rect.y > screen.get_height():
                 fadeScreen(screen, True)
-
-                advance = False
-                if debug:
-                    advance = True
-                briefingRoom(playerObjs[index], advance)
+                briefingRoom(cards[index].playerObj)
                 startScreen()
                 exit()
 
-        # same for ships.
-        for i in range(len(playerObjs)):
-            # Drawing ships.
-            ship = playerObjs[i]
-            name = nameplates[i]
-
-            name.rect.midtop = ship.rect.midbottom
-
-            screen.blit(ship.image, ship.rect)
-            screen.blit(name.image, name.rect)
-            ship.rect.y += shipSpd
-
-        if index > len(nameplates) - 1:
-            index = 0
-        if index < 0:
-            index = len(nameplates) - 1
-
-        cursor.rect.midright = nameplates[index].rect.midleft
-        cursor.blink()
-
-        screen.blit(cursor.image, cursor.rect)
-
-        screen.blit(title.image, title.rect)
         screen.blit(shadeLayer, (0, 0))
+        screen.blit(title.image, title.rect)
+        screen.blit(cards[index].image, cards[0].rect)
         drawScanlines(1, 150, screen)
 
         pygame.display.update()
@@ -1541,7 +1515,7 @@ def startScreen():
     menu_vid = readVideo("video/earth.mp4", screen, MaxFrames=50 * 15.05, frameSkip=10)
     planet_vid = Video(menu_vid)
 
-    options = [start, menu, indev, quit]
+    options = [start, indev, quit]
     opIndex = 0
     i = 0
     selectMode = False
@@ -1600,9 +1574,13 @@ def startScreen():
                     pygame.quit()
                     exit()
                 elif options[opIndex] == indev:
-                    #main(earth, Player("cobra"))
-                    #turretTest()
-                    showKeyMapping()
+                    tmp = Player("avalanche")
+                    tmp.levelIndex = 2
+                    main(Level("Spore Nexus"), tmp)
+
+                    #briefingRoom(tmp, True)
+                    #creditsScreen(tmp)
+
                     startScreen()
                     exit()
                 else:
@@ -1704,6 +1682,124 @@ def gameOver():
         pygame.display.update()
         clock.tick(30)
 
+def creditsScreen(p1):
+
+    bgVid = Video(readVideo("video/moon.mp4",screen))
+
+    pygame.mixer.music.load("BGM/credits.ogg")
+    pygame.mixer.music.play()
+
+    p1.rect.midtop = screen.get_rect().midbottom
+
+    header = pygame.font.Font("fonts/SolomonsKey.ttf", 50)
+    scoreFont = pygame.font.Font("fonts/windows_command_prompt.ttf", 25)
+    finalFont = pygame.font.Font("fonts/ChargeVector.ttf", 75)
+    subFont = pygame.font.Font("fonts/SolomonsKey.ttf", 15)
+
+    pointsTitle = Text("Player Score", header, BLUE)
+    playerScore = Text(f"{p1.points}", scoreFont, GREEN)
+
+    playerScore.rect.midbottom = screen.get_rect().midtop
+    pointsTitle.rect.midbottom = playerScore.rect.midtop
+
+    msg = Text("Thanks for playing!!", finalFont, WHITE)
+    subtitle = Text("Good Job Soldier", subFont, WHITE)
+
+    subtitle.rect.midbottom = screen.get_rect().midtop
+    msg.rect.midbottom = subtitle.rect.midtop
+
+
+
+    credits = gameData["credits"]
+    letters = []
+    letterIndex = 0
+
+    mount = (15, screen.get_height()//3)
+
+    i = 0
+    for line in credits:
+        j = 0
+        for char in line:
+            tmp = Text(char, scoreFont, GREEN, (mount[0] + j*13, mount[1] + i*20))
+            letters.append(tmp)
+            j += 1
+        i += 1
+
+    bg1 = pygame.Surface(screen.get_size())
+    bg1.fill(BLACK)
+    bg1.set_alpha(15)
+
+    count = 0
+    phase = 0
+
+    # First loop that prints the ending text
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                exit()
+
+        for letter in letters[:letterIndex]:
+            screen.blit(letter.image, letter.rect)
+
+        if letterIndex < len(letters):
+            letterIndex += 1
+        else:
+            count += 1
+
+            if count > 3*30:
+                break
+
+        drawScanlines(1, 150, screen)
+        pygame.display.update()
+        clock.tick(30)
+
+    # Part two of the ending. Show the players achievements and thank player.
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                exit()
+            if event.type == pygame.KEYDOWN:
+                if phase > 1:
+                    fadeScreen(screen, True)
+                    startScreen()
+                    exit()
+
+        bgVid.play()
+
+        if phase <= 0:
+            pointsTitle.rect.midbottom = playerScore.rect.midtop
+
+            if playerScore.rect.midtop[1] <= screen.get_height()//2:
+                playerScore.rect.y += 3
+                count = 0
+            elif count > FPS:
+                if pointsTitle.rect.midtop[1] <= screen.get_height():
+                    playerScore.rect.y += 5
+                else:
+                    count = 0
+                    phase += 1
+        if phase == 1:
+            if msg.rect.midbottom[1] < screen.get_height()//2:
+                msg.rect.y += 3
+            else:
+                phase += 1
+
+            subtitle.rect.midtop = msg.rect.midbottom
+
+        screen.blit(msg.image, msg.rect)
+        screen.blit(subtitle.image, subtitle.rect)
+
+        screen.blit(pointsTitle.image, pointsTitle.rect)
+        screen.blit(playerScore.image, playerScore.rect)
+
+        drawScanlines(1, 15, screen)
+
+        pygame.display.update()
+        clock.tick(30)
+        count += 1
+
 # The main mechanics of the game.
 def main(level, p1):
     for sprite in sporeGroup.sprites():
@@ -1752,7 +1848,7 @@ def main(level, p1):
     sideMsg = Text("Press Enter to continue", subtitle, WHITE)
     sideMsg.rect.midtop = winText.rect.midbottom
 
-    pointsTitle = Text("Points", pointFont, WHITE)
+    pointsTitle = Text("Points", pointFont, WHITE, shadow=True)
     pointsTitle.rect.midtop = screen.get_rect().midtop
 
 
@@ -1777,8 +1873,6 @@ def main(level, p1):
     bossMode = False
     bossDead = False
     warningMode = False
-
-    #p1.levelIndex = 0
 
     mapScreen = pygame.Surface((screen.get_width() * 3//4, screen.get_height() * 3//4)).convert_alpha()
     mapScreen.fill(BLUE)
@@ -1809,13 +1903,13 @@ def main(level, p1):
                     break
 
 
-        playerPoints = Text(str(p1.points), pointFont, WHITE)
+        playerPoints = Text(str(p1.points), pointFont, WHITE, shadow=True)
         playerPoints.rect.midtop = pointsTitle.rect.midbottom
 
         if not bossMode:
             if count % level.waveTime == 0 and count > 0:
                 level.waveIndex += 1
-                if level.waveIndex >= len(level.wave) - 1:
+                if level.waveIndex > len(level.wave) - 1:
                     if not warningMode:
                         warningMode = True
                         pygame.mixer.music.stop()
@@ -1826,8 +1920,6 @@ def main(level, p1):
 
                         count = 0
                         level.waveIndex = 0
-
-
             if count % (FPS * 5) == 0 and not warningMode:
                 wave = level.wave[level.waveIndex]
 
@@ -1841,7 +1933,6 @@ def main(level, p1):
                 pUp = tmp() if tmp != WingUp else tmp(p1)
 
                 if len(wingmanGroup.sprites()) and isinstance(pUp, WingUp):
-                    count -= 1
                     continue
 
                 if not pygame.sprite.spritecollideany(pUp, powerUpGroup):
@@ -1861,6 +1952,7 @@ def main(level, p1):
                 count = 0
                 prema.body.health = 0
                 prema.body.kill()
+
         # To ensure less lag, kill unnecessary sprites.
         if len(fireGroup.sprites()) > 30:
             fireGroup.sprites()[0].kill()
@@ -1910,8 +2002,10 @@ def main(level, p1):
             for sprite in allClouds.sprites():
                 sprite.kill()
 
-
-            briefingRoom(p1, True)
+            if p1.levelIndex < len(levels) - 1:
+                briefingRoom(p1, True)
+            else:
+                creditsScreen(p1)
             exit()
 
         level.update()
@@ -1981,7 +2075,7 @@ def main(level, p1):
                 screen.blit(mapScreen, mapRect)
                 #screen.blit(prema.weakspot_map, prema.map_rect)
 
-            if count > level.waveTime:
+            if count > FPS*15:
                 healthBarGroup.add(bossBar)
 
                 sporeGroup.add(prema.body)
