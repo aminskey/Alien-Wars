@@ -34,7 +34,8 @@
         "Accept Mission [ENTER]?"
       ],
       "boss": "Premature_1",
-      "boss_bgm": "BGM/boss-1.ogg"
+      "boss_bgm": "BGM/boss-1.ogg",
+      "boss_legs": 1
     },
     "Debris Field": {
       "bg_strip": "levels/levelStrips/debri-field.png",
@@ -46,11 +47,7 @@
       "wave": [
         ["Spore_1", "Spore_1", "Spore_1"],
         ["Spore_3", "Spore_1", "Spore_2"],
-        ["Spore_1", "Spore_2", "Spore_1", "Spore_2", "Spore_1", "Spore_2"],
-        ["Spore_1", "Spore_2"],
-        ["Spore_3", "Spore_3", "Spore_3"],
-        ["Spore_1", "Spore_2", "Spore_1", "Spore_2", "Spore_1", "Spore_2"],
-        ["Spore_3", "Spore_1", "Spore_2"]
+        ["Spore_1", "Spore_2", "Spore_1", "Spore_2", "Spore_1", "Spore_2"]
       ],
       "briefing": [
         "\\C L A S S I F I E D           M I S S I O N^",
@@ -73,25 +70,23 @@
         "Accept Mission [ENTER]?"
       ],
       "boss": "Premature_1",
-      "boss_bgm": "BGM/boss-1.ogg"
+      "boss_bgm": "BGM/boss-1.ogg",
+      "boss_legs": 2
     },
     "Spore Nexus": {
       "bg_strip": "levels/levelStrips/nesting-place-map.png",
-      "bgm": "BGM/nexus-lev3.ogg",
+      "bgm": "BGM/misc.ogg",
       "Level Speed": 4,
       "cloudDensity": 5,
       "cloudType": "meteor",
       "icon": "levels/icons/nesting-base.png",
       "wave": [
-        ["Spore_1", "Spore_1", "Spore_1"],
-        ["Spore_3", "Spore_4", "Spore_2"],
-        ["Spore_1", "Spore_2", "Spore_1", "Spore_2", "Spore_1", "Spore_2"],
-        ["Spore_1", "Spore_4", "Spore_3", "Spore_2", "Spore_1", "Spore_4"],
         ["Spore_4", "Spore_1"],
-        ["Spore_3", "Spore_4", "Spore_1"],
-        ["Spore_1", "Spore_4", "Spore_1", "Spore_2", "Spore_4", "Spore_2"],
-        ["Spore_4", "Spore_3", "Spore_2", "Spore_1"],
-        ["Spore_1", "Spore_1", "Spore_1", "Spore_1", "Spore_1"]
+        ["Spore_1", "Spore_2"],
+        ["Spore_3", "Spore_3", "Spore_3"],
+        ["Spore_1", "Spore_2", "Spore_1", "Spore_2", "Spore_1", "Spore_2"],
+        ["Spore_3", "Spore_1", "Spore_2"],
+        ["Premature_2"]
       ],
       "briefing": [
         "\\C L A S S I F I E D           M I S S I O N^",
@@ -111,10 +106,15 @@
         "             \\Premature_1^",
         "             Classified as a @high-threat^ entity with advanced",
         "             tactical capabilities.",
-        "Accept Mission [ENTER]?"
+        "Accept Mission [ENTER]? "
       ],
       "boss": "Premature_1",
-      "boss_bgm": "BGM/boss-1.ogg"
+      "boss_bgm": "BGM/boss-2.ogg",
+      "boss_speed": 1,
+      "boss_health": 1800,
+      "boss_lazer1": "amp",
+      "boss_lazer2": "plasma",
+      "boss_legs": 5
     }
   },
   "credits": [
@@ -125,8 +125,8 @@
   ],
   "players": {
     "cobra": {
-      "weaponType": "standard",
-      "damage": 5,
+      "weaponType": "plasma",
+      "damage": 9,
       "bombDamage": 55
     },
     "avalanche": {
@@ -136,8 +136,21 @@
     },
     "bullseye": {
       "weaponType": "standard",
-      "damage": 3,
-      "bombDamage": 60
+      "damage": 5,
+      "bombDamage": 70
     }
-  }
+  },
+
+  "__comments": [
+    ["Spore_1", "Spore_4", "Spore_3", "Spore_2", "Spore_1", "Spore_4"],
+    ["Spore_1", "Spore_1", "Spore_1", "Spore_1", "Spore_1"],
+    ["Spore_1", "Spore_2"],
+    ["Spore_3", "Spore_3", "Spore_3"],
+    ["Spore_1", "Spore_2", "Spore_1", "Spore_2", "Spore_1", "Spore_2"],
+    ["Spore_3", "Spore_1", "Spore_2"],
+    ["Spore_3", "Spore_4", "Spore_2"],
+    ["Spore_1", "Spore_2", "Spore_1", "Spore_2", "Spore_1", "Spore_2"],
+    ["Spore_1", "Spore_4", "Spore_3", "Spore_2", "Spore_1", "Spore_4"],
+    ["Spore_4", "Spore_1"]
+  ]
 }
