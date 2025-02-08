@@ -749,6 +749,8 @@ class Premature_1():
 
         if self.ligaments <= 0:
             self.body.invincible = False
+        elif dist(self.body.rect.midtop, screen.get_rect().midtop) > 1:
+            self.body.rect.centery += 2
 
         if self.body.health > 0:
             if self.main_gun:
@@ -791,7 +793,6 @@ class Premature_1():
 class Premature_2(Premature_1):
     counter = 0
     units = 0
-    # Singleton def
     def __init__(self, target, *args, **kwargs):
 
         pygame.mixer.music.load(f"BGM/miniboss.ogg")
@@ -809,7 +810,7 @@ class Premature_2(Premature_1):
 
         self.body.rect.midbottom = (screen.get_width()//2, -screen.get_height())
         self.body.invincible = True
-        self.body.health = 500
+        self.body.health = kwargs["health"] if "health" in kwargs else 500
         self.maxHealth = self.body.health
         self.main_gun = None
 
@@ -838,6 +839,8 @@ class Premature_2(Premature_1):
             i.genGun("amp", 3, maxCool=50)
             i.gun.maxCool = self.maxCool
             i.gun.cooldown = self.coolDown
+
+            i.health += self.body.health * 0.125
 
             self.maxHealth += i.health
             self.ligaments += 1
@@ -876,11 +879,12 @@ class Premature_2(Premature_1):
         self.counter += 1
 
         if self.health <= 0:
-            self.level.pause = False
-            self.level.waveIndex += 1
+            if self.level:
+                self.level.pause = False
+                #self.level.waveIndex += 1
 
-            pygame.mixer.music.load(self.level.bgm)
-            pygame.mixer.music.play(-1)
+                pygame.mixer.music.load(self.level.bgm)
+                pygame.mixer.music.play(-1)
 
 
         super().update(type)
@@ -895,8 +899,9 @@ class Premature_2(Premature_1):
                     self.fire(type, 45 + i * 64, 5)
                     self.fire("plasma", 30 + i * 64, 5)
                     self.coolDown = self.maxCool
-        elif dist(self.body.rect.midtop, screen.get_rect().midtop) > 1:
-            self.body.rect.centery += 2
+
+            if dist(self.body.rect.center, screen.get_rect().center):
+                self.body.rect.centery += 1 if self.body.rect.centery < screen.get_rect().centery else -1
 
 
     def draw_gun(self, window):
@@ -1743,15 +1748,9 @@ def startScreen():
                     exit()
                 elif options[opIndex] == indev:
                     tmp = Player("cobra")
-                    tmp.levelIndex = 1
+                    tmp.levelIndex = 0
 
                     briefingRoom(tmp, True)
-                    main(Level("Spore Nexus"), tmp)
-
-                    briefingRoom(tmp, True)
-                    creditsScreen(tmp)
-                    #turretTest()
-
                     startScreen()
                     exit()
                 else:
@@ -2053,7 +2052,7 @@ def main(level, p1):
     tmp1 = Text("Weak spots to target", subtitle, WHITE)
     tip1 = Text("HINT: Go after its limbs", subtitle, WHITE)
 
-    tmp1.rect.midtop = mapRect.midtop
+    tmp1.rect.midbottom = mapRect.midtop
     prema.map_rect.midtop = tmp1.rect.midtop
     tip1.rect.midtop = prema.map_rect.midbottom
 
@@ -2066,7 +2065,6 @@ def main(level, p1):
     miniboss_grp = {}
 
     while True:
-        #print(level.pause)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
@@ -2094,15 +2092,16 @@ def main(level, p1):
 
                         count = 0
                         level.waveIndex = 0
-            if count % (FPS * 5) == 0 and not warningMode:
+
+            if count % (FPS * 8) == 0 and not warningMode:
                 wave = level.wave[level.waveIndex]
 
                 for sporeObj in wave:
                     if sporeObj == Premature_2:
-                        spore = sporeObj(p1, level=level)
-                        level.pause = True
-
                         if not miniboss_grp.get(level.waveIndex):
+                            spore = sporeObj(p1, level=level)
+                            level.pause = True
+
                             miniboss_grp[level.waveIndex] = [spore]
 
                             sporeGroup.add(spore.body)
@@ -2113,8 +2112,7 @@ def main(level, p1):
                         sporeGroup.add(spore)
                         allSprites.add(spore)
 
-
-            if count % (15 * FPS) == 0:
+            if count % (7 * FPS) == 0:
                 tmp = powerUpTypes[random.randint(0, len(powerUpTypes)-1)]
                 pUp = tmp() if tmp != WingUp else tmp(p1)
 
@@ -2207,16 +2205,17 @@ def main(level, p1):
 
         if miniboss_grp.get(level.waveIndex):
             for item in miniboss_grp[level.waveIndex]:
-                if item.health <= 0:
-                    miniboss_grp[level.waveIndex].remove(item)
-                    count = level.waveTime - 1
-                item.update()
+                if isinstance(item, Premature_2):
+                    if item.health <= 0:
+                        count = level.waveTime - FPS * 5
+                        miniboss_grp[level.waveIndex].remove(item)
+                        miniboss_grp[level.waveIndex].append(12)
+                    item.update()
+
 
         if bossMode:
             if not bossDead:
                 prema.update(type=level.boss_lazer2)
-                if prema.body.rect.centery < screen.get_height()//3:
-                    prema.body.rect.centery += 1
         # Putting sporeGroup.update() after prema.update() to avoid bugs during boss fight.
         sporeGroup.update()
 
@@ -2236,7 +2235,8 @@ def main(level, p1):
 
             if miniboss_grp.get(level.waveIndex):
                 for item in miniboss_grp[level.waveIndex]:
-                    item.draw_gun(screen)
+                    if isinstance(item, Premature_2):
+                        item.draw_gun(screen)
 
             if bossMode:
                 fireGroup.draw(screen)
