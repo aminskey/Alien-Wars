@@ -72,6 +72,7 @@
       "boss": "Premature_2",
       "boss_bgm": "BGM/boss-3.ogg",
       "boss_health": 2000,
+      "boss_lazer2": "plasma",
       "boss_speed": 35
     },
     "Spore Nexus": {
@@ -135,13 +136,14 @@
     },
     "avalanche": {
       "weaponType": "amp",
-      "damage": 6,
-      "bombDamage": 50
+      "damage": 7,
+      "bombDamage": 64,
+      "speed": 7
     },
     "bullseye": {
       "weaponType": "standard",
       "damage": 5,
-      "bombDamage": 70
+      "bombDamage": 80
     }
   },
 

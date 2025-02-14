@@ -82,7 +82,7 @@ class Player(pygame.sprite.Sprite):
 
         self.name = name
         self.rect = self.image.get_rect()
-        self.speed = 5
+        self.speed = playerData["speed"] if "speed" in playerData else 5
         self.points = 0
 
         self.left_img = pygame.image.load(f"player/{name}/{name}-left.png")
@@ -812,11 +812,14 @@ class Premature_2(Premature_1):
         self.body.invincible = True
         self.body.health = kwargs["health"] if "health" in kwargs else 500
         self.maxHealth = self.body.health
-        self.main_gun = None
 
         self.maxCool = 125
         self.coolDown = 5
         self.ligaments = 0
+
+        #self.body.genGun("amp", 3, self.maxCool)
+        #self.body.gun.cooldown = self.maxCool
+        self.main_gun = None
 
         if "level" in kwargs:
             self.level = kwargs["level"]
@@ -844,7 +847,6 @@ class Premature_2(Premature_1):
 
             self.maxHealth += i.health
             self.ligaments += 1
-
 
         self.health = self.maxHealth
 
@@ -875,7 +877,7 @@ class Premature_2(Premature_1):
                 self.lig_right.remove(lig)
                 self.ligaments -= 1
 
-    def update(self, type="bomb"):
+    def update(self, type="standard"):
         self.counter += 1
 
         if self.health <= 0:
@@ -890,21 +892,23 @@ class Premature_2(Premature_1):
         super().update(type)
 
         if self.ligaments <= 0:
-            self.maxCool = 75
+            self.maxCool = 25
             self.body.rect.centerx += 12*math.sin(0.12*self.counter)
             self.body.rect.centery -= 12*math.cos(0.12*self.counter)
 
             if self.coolDown <= 0:
                 for i in range(5):
-                    self.fire(type, 45 + i * 64, 5)
+                    self.fire("bomb", 45 + i * 64, 5)
                     self.fire("plasma", 30 + i * 64, 5)
                     self.coolDown = self.maxCool
 
-            if dist(self.body.rect.center, screen.get_rect().center):
+            if dist(self.body.rect.center, screen.get_rect().center) > 5:
                 self.body.rect.centery += 1 if self.body.rect.centery < screen.get_rect().centery else -1
 
 
     def draw_gun(self, window):
+        if isinstance(self.body.gun, Gun):
+            self.body.draw_premagun(window)
         for lig in self.lig_left + self.lig_right:
             if lig.health > 0:
                 lig.draw_premagun(window)
@@ -1163,8 +1167,9 @@ class SpecsCard(pygame.sprite.Sprite):
         self.weaponType = Text(f"Weapon: {self.playerObj.weaponType}", self.statFont, self.statColor)
         self.damageAmnt = Text(f"Weapon Damage: {self.playerObj.damage}", self.statFont, self.statColor)
         self.bombDamage = Text(f"Bomb Damage: {self.playerObj.bombDamage}", self.statFont, self.statColor)
+        self.speedNum = Text(f"Movement Speed: {self.playerObj.speed}", self.statFont, self.statColor)
 
-        text = [self.weaponType, self.damageAmnt, self.bombDamage]
+        text = [self.weaponType, self.damageAmnt, self.bombDamage, self.speedNum]
 
         self.title.rect.topleft = (10, 20)
         self.image.blit(self.shipImg, self.shipRect)
@@ -1747,7 +1752,7 @@ def startScreen():
                     pygame.quit()
                     exit()
                 elif options[opIndex] == indev:
-                    tmp = Player("cobra")
+                    tmp = Player("avalanche")
                     tmp.levelIndex = 0
 
                     briefingRoom(tmp, True)
