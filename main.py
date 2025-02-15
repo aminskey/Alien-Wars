@@ -641,7 +641,8 @@ class Prema_Part(pygame.sprite.Sprite):
                 powerUpGroup.add(pUp)
 
             tmp = Explosion(explosion, 3, pos=self.rect.center, sound="SFX/ship-explosion.wav")
-            sporeGroup.add(tmp)
+            part = BrokenPart(self)
+            bgGroup.add(tmp, part)
             self.kill()
         elif isinstance(self.gun, Gun):
             self.gun.mountpoint = self.rect.center
@@ -659,6 +660,47 @@ class Prema_Part(pygame.sprite.Sprite):
     def draw_premagun(self, window):
         window.blit(self.gun.turret_frame, self.gun.frame_rect)
         window.blit(self.gun.image, self.gun.rect)
+
+class BrokenPart(pygame.sprite.Sprite):
+    def __init__(self, prema_part):
+        super().__init__()
+        self.image = prema_part.image.copy()
+        self.rect = prema_part.rect
+
+        self.v = pygame.math.Vector2(0, 0)
+        self.acc = pygame.math.Vector2(0, 1)
+        self.counter = 0
+
+    # from boids algorithm
+    def separation(self, tooClose, sep_fac):
+        sep_vec = pygame.math.Vector2(0, 0)
+        for sprite in bgGroup.sprites() + sporeGroup.sprites():
+            if sprite != self:
+                d = dist(self.rect.center, sprite.rect.center)
+                if d <= tooClose:
+                    pos_vec = pygame.math.Vector2(self.rect.centerx - sprite.rect.centerx, self.rect.centery - sprite.rect.centery)
+                    if pos_vec.length() <= 0:
+                        pos_vec = pygame.math.Vector2(1, 1)
+                    sep_vec += pos_vec.normalize() / (d if d > 0 else 1)
+        return sep_vec * sep_fac
+    def update(self):
+        self.counter += 1
+
+        self.v += self.acc
+        self.v += self.separation(self.image.get_width()*1.5, 10)
+        if self.v.length() > 5:
+            self.v = self.v.normalize() * 5
+
+        self.rect.center += self.v
+
+        if self.rect.midtop[1] > screen.get_height():
+            self.kill()
+
+        if self.counter % 2 == 0:
+            self.image.set_alpha(200)
+        else:
+            self.image.set_alpha(50)
+
 
 class Premature_1():
     def __init__(self, target, resizeFactor=1, oppGroup=playerGroup, health=500, legs=3, lazertype="standard"):
@@ -913,6 +955,9 @@ class Premature_2(Premature_1):
             if lig.health > 0:
                 lig.draw_premagun(window)
 
+#class Premature_3(Premature_1):
+#    def __init__(self, target, *args, **kwargs):
+#
 
 class Spore_Generic(pygame.sprite.Sprite):
     def __init__(self, target, tagNumber, weaponType, sizeFactor=1, points=50):
@@ -2247,6 +2292,7 @@ def main(level, p1):
                 fireGroup.draw(screen)
                 prema.draw_gun(screen)
 
+        bgGroup.draw(screen)
         cloudsGroup1.draw(screen)
         wingmanGroup.draw(screen)
         powerUpGroup.draw(screen)
