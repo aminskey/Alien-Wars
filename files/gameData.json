@@ -37,17 +37,15 @@
       "boss_bgm": "BGM/boss-1.ogg",
       "boss_legs": 1
     },
-    "Debris Field": {
-      "bg_strip": "levels/levelStrips/debri-field.png",
-      "bgm": "BGM/debri-lev2.ogg",
+    "The Moon": {
+      "bg_strip": "levels/levelStrips/moon.png",
+      "bgm": "BGM/moon.ogg",
       "Level Speed": 5,
       "cloudDensity": 5,
       "cloudType": "meteor",
-      "icon": "levels/icons/meteor.png",
+      "icon": "levels/icons/moon.png",
       "wave": [
-        ["Spore_1", "Spore_1", "Spore_1"],
-        ["Spore_3", "Spore_1", "Spore_2"],
-        ["Spore_1", "Spore_2", "Spore_1", "Spore_2", "Spore_1", "Spore_2"]
+        ["Spore_1", "Spore_1", "Spore_1"]
       ],
       "briefing": [
         "\\C L A S S I F I E D           M I S S I O N^",
@@ -62,11 +60,45 @@
         "You know the drill. Take it down!!",
         "",
         "Mission Area:",
-        "             \\Debris Field^",
+        "             \\The moon^",
         "Primary Target:",
         "             \\Premature_?^",
-        "             Rumored to be a wall-like tank",
+        "             Rumored to be an iron-like dome of fire.",
         "             Approach with caution.",
+        "Accept Mission [ENTER]?"
+      ],
+      "boss": "Premature_3",
+      "boss_bgm": "BGM/boss-4.ogg",
+      "boss_health": 1000,
+      "boss_lazer2": "plasma",
+      "boss_speed": 35
+    },
+    "Debris Field": {
+      "bg_strip": "levels/levelStrips/debri-field.png",
+      "bgm": "BGM/debri-lev2.ogg",
+      "Level Speed": 5,
+      "cloudDensity": 5,
+      "cloudType": "meteor",
+      "icon": "levels/icons/meteor.png",
+      "wave": [
+        ["Spore_1", "Spore_1", "Spore_1"]
+      ],
+      "briefing": [
+        "\\C L A S S I F I E D           M I S S I O N^",
+        "Code Name: Operation Seek and Destroy",
+        "Situation Overview:",
+        "Intel has gathered information further information on the @Prematures^.",
+        "Their breeding grounds have been located on a moon near Jupiter.",
+        "But to even get there, you must travel the \\Debris Field^, which is a",
+        "well known region for @outlaws^ and now also alien \\spores^ and ",
+        "@Prematures^. It is rumored that a tank-like premature resides in these",
+        "regions. Take care and beware of pirates.",
+        "Mission Area:",
+        "             \\Debris Field^",
+        "Primary Target:",
+        "             \\Premature_2^",
+        "             Tank like appearance with weapons mounted on each part",
+        "             Approach with caution!!",
         "Accept Mission [ENTER]?"
       ],
       "boss": "Premature_2",
@@ -131,19 +163,21 @@
   "players": {
     "cobra": {
       "weaponType": "plasma",
-      "damage": 9,
-      "bombDamage": 55
+      "damage": 10,
+      "bombDamage": 55,
+      "speed": 8
     },
     "avalanche": {
       "weaponType": "amp",
-      "damage": 7,
+      "damage": 5,
       "bombDamage": 64,
       "speed": 7
     },
     "bullseye": {
       "weaponType": "standard",
-      "damage": 5,
-      "bombDamage": 80
+      "damage": 3,
+      "bombDamage": 80,
+      "speed": 5
     }
   },
 

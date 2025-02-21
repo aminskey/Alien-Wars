@@ -233,7 +233,8 @@ class Level():
             "Spore_3": Spore_3,
             "Spore_4": Spore_4,
             "Premature_1": Premature_1,
-            "Premature_2": Premature_2
+            "Premature_2": Premature_2,
+            "Premature_3": Premature_3
         }
 
         data = gameData["levels"].get(level)
@@ -786,13 +787,33 @@ class Premature_1():
                 self.lig_right.remove(right)
                 self.ligaments -= 1
 
+    def attack(self, type):
+        if self.coolDown <= 0:
+            if not self.body.invincible:
+                self.spawn_spore(Spore_2)
+            if isInBounds(self.health / self.maxHealth, 0.75, 0.25):
+                for i in range(5):
+                    self.fire(type, 45 + i * 64, 5)
+            if self.health / self.maxHealth < 0.25:
+                for i in range(10):
+                    self.fire("bomb", 45 + i * 32, 1)
+            if self.health / self.maxHealth < 0.15:
+                self.spawn_spore(Spore_4)
+
+            self.coolDown = self.maxCool
+        else:
+            self.coolDown -= 1
+
+    def positioning(self):
+        if abs(dist(self.body.rect.midtop, (0, 0))) > 5:
+            self.body.rect.centery += 1 if self.body.rect.midtop[1] < 0 else -1
+
     def update(self, type="bomb"):
         print(self.body.health, self.health)
 
         if self.ligaments <= 0:
             self.body.invincible = False
-        elif dist(self.body.rect.midtop, screen.get_rect().midtop) > 1:
-            self.body.rect.centery += 2
+        self.positioning()
 
         if self.body.health > 0:
             if self.main_gun:
@@ -800,22 +821,7 @@ class Premature_1():
                 self.main_gun.update()
 
             self.place_ligaments()
-
-            if self.coolDown <= 0:
-                if not self.body.invincible:
-                    self.spawn_spore(Spore_2)
-                if isInBounds(self.health/self.maxHealth, 0.75, 0.25):
-                    for i in range(5):
-                        self.fire(type, 45+i*64, 5)
-                if self.health/self.maxHealth < 0.25:
-                    for i in range(10):
-                        self.fire("bomb", 45+i*32, 1)
-                if self.health/self.maxHealth < 0.15:
-                    self.spawn_spore(Spore_4)
-
-                self.coolDown = self.maxCool
-            else:
-                self.coolDown -= 1
+            self.attack(type)
 
         self.body.health = self.health
 
@@ -833,7 +839,6 @@ class Premature_1():
         window.blit(self.main_gun.image, self.main_gun.rect)
 
 class Premature_2(Premature_1):
-    counter = 0
     units = 0
     def __init__(self, target, *args, **kwargs):
 
@@ -841,8 +846,9 @@ class Premature_2(Premature_1):
         pygame.mixer.music.play(-1)
 
         self.units += 1
+        self.counter = 0
         self.resizeFactor = 3
-        self.type = "Premature_2"
+        self.type = kwargs["type"] if "type" in kwargs else "Premature_2"
         self.body = Prema_Part(self.type, "body", target, self, self.resizeFactor, 800)
 
         self.weakspot_map = pygame.image.load(f"bosses/{self.type}/{self.type}-weakspotmap.png")
@@ -859,8 +865,6 @@ class Premature_2(Premature_1):
         self.coolDown = 5
         self.ligaments = 0
 
-        #self.body.genGun("amp", 3, self.maxCool)
-        #self.body.gun.cooldown = self.maxCool
         self.main_gun = None
 
         if "level" in kwargs:
@@ -869,28 +873,31 @@ class Premature_2(Premature_1):
         else:
             self.level = None
 
-        self.lig_left = [Prema_Part(self.type, "center", target, self, self.resizeFactor, points=500)]
-        self.lig_right = [Prema_Part(self.type, "center", target, self, self.resizeFactor, points=500)]
+        self.lig_left = []
+        self.lig_right = []
+        self.body_setup()
+        self.health = self.maxHealth
 
-        self.lig_left.append(Prema_Part(self.type, "left-corner", target, self, self.resizeFactor, points=500))
-        self.lig_left.append(Prema_Part(self.type, "center-mid", target, self, self.resizeFactor, points=500))
-        self.lig_left.append(Prema_Part(self.type, "up", target, self, self.resizeFactor, points=500))
+    def body_setup(self):
+        self.lig_left = [Prema_Part(self.type, "center", self.target, self, self.resizeFactor, points=500)]
+        self.lig_right = [Prema_Part(self.type, "center", self.target, self, self.resizeFactor, points=500)]
 
-        self.lig_right.append(Prema_Part(self.type, "right-corner", target, self, self.resizeFactor, points=500))
-        self.lig_right.append(Prema_Part(self.type, "center-mid", target, self, self.resizeFactor, points=500))
-        self.lig_right.append(Prema_Part(self.type, "up", target, self, self.resizeFactor, points=500))
+        self.lig_left.append(Prema_Part(self.type, "left-corner", self.target, self, self.resizeFactor, points=500))
+        self.lig_left.append(Prema_Part(self.type, "center-mid", self.target, self, self.resizeFactor, points=500))
+        self.lig_left.append(Prema_Part(self.type, "up", self.target, self, self.resizeFactor, points=500))
+
+        self.lig_right.append(Prema_Part(self.type, "right-corner", self.target, self, self.resizeFactor, points=500))
+        self.lig_right.append(Prema_Part(self.type, "center-mid", self.target, self, self.resizeFactor, points=500))
+        self.lig_right.append(Prema_Part(self.type, "up", self.target, self, self.resizeFactor, points=500))
 
         for i in self.lig_left + self.lig_right:
-            i.genGun("amp", 3, maxCool=50)
-            i.gun.maxCool = self.maxCool
+            i.genGun("amp", 3, maxCool=self.maxCool)
             i.gun.cooldown = self.coolDown
 
             i.health += self.body.health * 0.125
 
             self.maxHealth += i.health
             self.ligaments += 1
-
-        self.health = self.maxHealth
 
     def place_ligaments(self):
         for i, lig in enumerate(self.lig_left):
@@ -919,19 +926,8 @@ class Premature_2(Premature_1):
                 self.lig_right.remove(lig)
                 self.ligaments -= 1
 
-    def update(self, type="standard"):
-        self.counter += 1
-
-        if self.health <= 0:
-            if self.level:
-                self.level.pause = False
-                #self.level.waveIndex += 1
-
-                pygame.mixer.music.load(self.level.bgm)
-                pygame.mixer.music.play(-1)
-
-
-        super().update(type)
+    def attack(self, type):
+        super().attack(type)
 
         if self.ligaments <= 0:
             self.maxCool = 25
@@ -944,8 +940,28 @@ class Premature_2(Premature_1):
                     self.fire("plasma", 30 + i * 64, 5)
                     self.coolDown = self.maxCool
 
-            if dist(self.body.rect.center, screen.get_rect().center) > 5:
+    def positioning(self):
+        if self.ligaments <= 0:
+            if abs(dist(self.body.rect.center, screen.get_rect().center)) > 5:
                 self.body.rect.centery += 1 if self.body.rect.centery < screen.get_rect().centery else -1
+        elif self.ligaments >= 0:
+            if abs(dist(self.body.rect.midtop, (0, 0))) > 5:
+                self.body.rect.centery += 2 if self.body.rect.midtop[1] < 0 else -2
+
+    def update(self, type="standard"):
+        self.counter += 1
+
+        self.positioning()
+
+        if self.health <= 0:
+            if self.level:
+                self.level.pause = False
+                #self.level.waveIndex += 1
+
+                pygame.mixer.music.load(self.level.bgm)
+                pygame.mixer.music.play(-1)
+
+        super().update(type)
 
 
     def draw_gun(self, window):
@@ -955,9 +971,57 @@ class Premature_2(Premature_1):
             if lig.health > 0:
                 lig.draw_premagun(window)
 
-#class Premature_3(Premature_1):
-#    def __init__(self, target, *args, **kwargs):
-#
+class Premature_3(Premature_2):
+    def __init__(self, target, *args, **kwargs):
+        super().__init__(target, *args, type="Premature_3", **kwargs)
+
+        pygame.mixer.music.load(f"BGM/boss-4.ogg")
+        pygame.mixer.music.play(-1)
+
+    def body_setup(self):
+        for i in range(5):
+            part = Prema_Part(self.type, "part", self.target, self, self.resizeFactor)
+            part.genGun("plasma", self.resizeFactor, maxCool=random.randint(50, 75))
+            part.gun.cooldown = self.coolDown
+
+            #part.health += self.body.health * 0.125
+
+            self.maxHealth += part.health
+            self.ligaments += 1
+
+            self.lig_left.append(part)
+
+    def positioning(self):
+        if abs(dist(self.body.rect.center, screen.get_rect().center)) > 5:
+            self.body.rect.centery += 1 if self.body.rect.centery < screen.get_rect().centery else -1
+
+
+    def attack(self, type):
+        if self.coolDown <= 0:
+            if self.ligaments > 0:
+                if isInBounds(self.health / self.maxHealth, 0.75, 0.25):
+                    for i in range(5):
+                        self.fire(type, 45 + i * 64, 5)
+                self.coolDown = self.maxCool
+            else:
+                for i in range(5):
+                    self.fire(type, (self.counter+1)%360 + i * 64, 5)
+                self.coolDown = 30
+        else:
+            self.coolDown -= 1
+
+
+
+    def place_ligaments(self):
+        for i, lig in enumerate(self.lig_left):
+            lig.rect.center = self.body.rect.center + pygame.math.Vector2(0, 100 + 100*math.sin(self.counter * 0.05)).rotate(self.counter + 360/(i+1))
+
+            if lig.health <= 0:
+                lig.kill()
+                self.lig_left.remove(lig)
+                self.ligaments -= 1
+    def update(self, type="plasma"):
+        super().update(type)
 
 class Spore_Generic(pygame.sprite.Sprite):
     def __init__(self, target, tagNumber, weaponType, sizeFactor=1, points=50):
@@ -2147,7 +2211,7 @@ def main(level, p1):
                 wave = level.wave[level.waveIndex]
 
                 for sporeObj in wave:
-                    if sporeObj == Premature_2:
+                    if sporeObj == Premature_2 or sporeObj == Premature_3:
                         if not miniboss_grp.get(level.waveIndex):
                             spore = sporeObj(p1, level=level)
                             level.pause = True
@@ -2188,7 +2252,8 @@ def main(level, p1):
                 prema.body.kill()
 
         # To ensure less lag, kill unnecessary sprites.
-        if len(fireGroup.sprites()) > 30:
+        lazer_cap = 30 if not bossMode else 200
+        if len(fireGroup.sprites()) > lazer_cap:
             fireGroup.sprites()[0].kill()
 
         if len(playerGroup.sprites()) <= 0:
