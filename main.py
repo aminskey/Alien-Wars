@@ -78,12 +78,15 @@ class Player(pygame.sprite.Sprite):
         playerData = gameData["players"][name]
 
         self.base_image = pygame.image.load(f"player/{name}/{name}.png")
-        self.image = self.base_image
+        self.image = self.base_image.copy()
+        self.copy = self.base_image.copy()
 
         self.name = name
         self.rect = self.image.get_rect()
         self.speed = playerData["speed"] if "speed" in playerData else 5
         self.points = 0
+        self.immunity = FPS*1 # 1 second
+        self.tick = 0
 
         self.left_img = pygame.image.load(f"player/{name}/{name}-left.png")
         self.right_img = pygame.image.load(f"player/{name}/{name}-right.png")
@@ -185,14 +188,15 @@ class Player(pygame.sprite.Sprite):
 
     def printLifeCount(self, window=screen):
         im_res = (self.base_image.get_width() // 1.2, self.base_image.get_height() // 1.2)
-        image = pygame.transform.scale(self.base_image, im_res)
+        image = pygame.transform.scale(self.copy, im_res)
         for i in range(self.lives):
-            window.blit(image,
-                        (i * image.get_width(), window.get_height() - image.get_height()*2))
+            window.blit(image, (i * image.get_width(), window.get_height() - image.get_height()*2))
     def printBombCount(self, window=screen):
         for i in range(self.bombs):
             window.blit(self.bombImg, (i * self.bombImg.get_width(), 0))
     def update(self):
+        self.tick += 1
+        self.immunity -= 1
         keys = pygame.key.get_pressed()
 
         if keys[K_SPACE]:
@@ -209,8 +213,9 @@ class Player(pygame.sprite.Sprite):
         if pygame.sprite.spritecollideany(self, sporeGroup):
             sprite = pygame.sprite.spritecollideany(self, sporeGroup)
             if not isinstance(sprite, Explosion):
-                self.health = 0
-                sprite.health -= 50
+                if self.immunity <= 0:
+                    self.health = 0
+                    sprite.health -= 50
 
         if self.health <= 0:
             tmp = Explosion(explosion, 2, 1, self.rect.center, False, "SFX/ship-explosion.wav")
@@ -219,7 +224,17 @@ class Player(pygame.sprite.Sprite):
             self.lives -= 1
             if self.lives > 0:
                 self.health = 100
+                self.immunity = 5*FPS
             self.kill()
+
+        if self.immunity > 0:
+            if self.tick % 4 == 0:
+                self.image.set_alpha(150)
+            else:
+                self.image.set_alpha(0)
+        else:
+            if self.image.get_alpha() < 254:
+                self.image.set_alpha(255)
 
         self.image = self.base_image
         self.move(keys)
@@ -365,17 +380,25 @@ class Lazer(pygame.sprite.Sprite):
 
         if pygame.sprite.spritecollideany(self, self.oppGroup):
             sprite = pygame.sprite.spritecollideany(self, self.oppGroup)
+            die = True
             if hasattr(sprite, "health"):
                 if hasattr(sprite, "premature"):
                     if not sprite.invincible:
                         sprite.premature.health -= self.damage
-                sprite.health -= self.damage
+                elif hasattr(sprite, "immunity"):
+                    if sprite.immunity < 0:
+                        sprite.health -= self.damage
+                    else:
+                        die = False
+                else:
+                    sprite.health -= self.damage
                 if sprite.health <= 0:
                     if hasattr(self.sender, "points"):
                         self.sender.points += sprite.points
-            exp = Explosion(explosion, self.sizeFactor, 3, self.rect.center)
-            fireGroup.add(exp)
-            self.kill()
+            if die:
+                exp = Explosion(explosion, self.sizeFactor, 3, self.rect.center)
+                fireGroup.add(exp)
+                self.kill()
 
 
 class dummySprite(pygame.sprite.Sprite):
@@ -563,6 +586,7 @@ class Wingman(Player):
         self.rect = self.image.get_rect()
 
         self.player = player
+        self.immunity = self.player.immunity
         self.health = 50
         self.bombs = 0
         self.lives = 1
@@ -1862,7 +1886,7 @@ def startScreen():
                     exit()
                 elif options[opIndex] == indev:
                     tmp = Player("avalanche")
-                    tmp.levelIndex = 0
+                    tmp.levelIndex = 1
 
                     briefingRoom(tmp, True)
                     startScreen()
