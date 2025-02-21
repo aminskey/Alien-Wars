@@ -727,7 +727,7 @@ class BrokenPart(pygame.sprite.Sprite):
             self.image.set_alpha(50)
 
 
-class Premature_1():
+class Premature_1:
     def __init__(self, target, resizeFactor=1, oppGroup=playerGroup, health=500, legs=3, lazertype="standard"):
         self.type = "Premature_1"
         self.body = Prema_Part(self.type, "body", target, self, resizeFactor, 300)
@@ -781,6 +781,9 @@ class Premature_1():
             self.ligaments += 2
 
         self.health = self.maxHealth
+        self.healthbar = HealthBar(self, screen.get_width()//2)
+        #self.healthbar.rect.topright = screen.get_rect().topright
+
     def fire(self, type, angle, speed=2):
         tmp = Lazer(type, 15, self.body.rect.center + pygame.math.Vector2(0, self.body.image.get_height()//5), speed, angle, 0.75)
         tmp.sender = self
@@ -834,6 +837,7 @@ class Premature_1():
 
     def update(self, type="bomb"):
         print(self.body.health, self.health)
+        self.healthbar.rect.topright = screen.get_rect().topright
 
         if self.ligaments <= 0:
             self.body.invincible = False
@@ -846,6 +850,8 @@ class Premature_1():
 
             self.place_ligaments()
             self.attack(type)
+        else:
+            self.healthbar.kill()
 
         self.body.health = self.health
 
@@ -864,9 +870,9 @@ class Premature_1():
 
 class Premature_2(Premature_1):
     units = 0
-    def __init__(self, target, *args, **kwargs):
+    def __init__(self, target, *args, miniboss="BGM/miniboss.ogg", **kwargs):
 
-        pygame.mixer.music.load(f"BGM/miniboss.ogg")
+        pygame.mixer.music.load(miniboss)
         pygame.mixer.music.play(-1)
 
         self.units += 1
@@ -901,6 +907,8 @@ class Premature_2(Premature_1):
         self.lig_right = []
         self.body_setup()
         self.health = self.maxHealth
+        self.healthbar = HealthBar(self, screen.get_width() // 2)
+
 
     def body_setup(self):
         self.lig_left = [Prema_Part(self.type, "center", self.target, self, self.resizeFactor, points=500)]
@@ -982,7 +990,7 @@ class Premature_2(Premature_1):
                 self.level.pause = False
                 #self.level.waveIndex += 1
 
-                pygame.mixer.music.load(self.level.bgm)
+                pygame.mixer.music.load("BGM/worry.ogg")
                 pygame.mixer.music.play(-1)
 
         super().update(type)
@@ -997,10 +1005,7 @@ class Premature_2(Premature_1):
 
 class Premature_3(Premature_2):
     def __init__(self, target, *args, **kwargs):
-        super().__init__(target, *args, type="Premature_3", **kwargs)
-
-        pygame.mixer.music.load(f"BGM/boss-4.ogg")
-        pygame.mixer.music.play(-1)
+        super().__init__(target, *args, **kwargs, type="Premature_3", miniboss="BGM/miniboss-2.ogg")
 
     def body_setup(self):
         for i in range(5):
@@ -1886,7 +1891,7 @@ def startScreen():
                     exit()
                 elif options[opIndex] == indev:
                     tmp = Player("avalanche")
-                    tmp.levelIndex = 1
+                    tmp.levelIndex = 0
 
                     briefingRoom(tmp, True)
                     startScreen()
@@ -2136,7 +2141,6 @@ def main(level, p1):
     healthBar = HealthBar(p1)
     healthBarGroup.add(healthBar)
 
-    bossBar = HealthBar(prema, screen.get_width()//2)
 
     font = pygame.font.Font("fonts/planet_joust_ownjx.otf", 50)
     subtitle = pygame.font.Font("fonts/ChargeVector.ttf", 25)
@@ -2242,6 +2246,7 @@ def main(level, p1):
 
                             miniboss_grp[level.waveIndex] = [spore]
 
+                            healthBarGroup.add(spore.healthbar)
                             sporeGroup.add(spore.body)
                             for i in (spore.lig_left + spore.lig_right):
                                 sporeGroup.add(i)
@@ -2337,8 +2342,6 @@ def main(level, p1):
         bgGroup.update()
         allClouds.update(speed=level.speed+1)
         healthBarGroup.update()
-        if bossMode:
-            bossBar.rect.topright = screen.get_rect().topright
         wingmanGroup.update()
         powerUpGroup.update()
 
@@ -2416,9 +2419,8 @@ def main(level, p1):
                 screen.blit(mapScreen, mapRect)
 
             if count > FPS*11:
-                healthBarGroup.add(bossBar)
-
                 sporeGroup.add(prema.body)
+                healthBarGroup.add(prema.healthbar)
                 for left in prema.lig_left:
                     sporeGroup.add(left)
                 for right in prema.lig_right:

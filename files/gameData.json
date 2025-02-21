@@ -45,7 +45,9 @@
       "cloudType": "meteor",
       "icon": "levels/icons/moon.png",
       "wave": [
-        ["Spore_1", "Spore_1", "Spore_1"]
+        ["Spore_2", "Spore_1", "Spore_3"],
+        ["Spore_3", "Spore_4", "Spore_1"],
+        ["Spore_2", "Spore_2", "Spore_1", "Spore_4", "Spore_2"]
       ],
       "briefing": [
         "\\C L A S S I F I E D           M I S S I O N^",
@@ -81,7 +83,10 @@
       "cloudType": "meteor",
       "icon": "levels/icons/meteor.png",
       "wave": [
-        ["Spore_1", "Spore_1", "Spore_1"]
+        ["Spore_1", "Spore_1", "Spore_1"],
+        ["Spore_3", "Spore_4", "Spore_2"],
+        ["Spore_1", "Spore_4", "Spore_2"],
+        ["Spore_2", "Spore_2", "Spore_1", "Spore_4", "Spore_2"]
       ],
       "briefing": [
         "\\C L A S S I F I E D           M I S S I O N^",
@@ -116,10 +121,10 @@
       "icon": "levels/icons/nesting-base.png",
       "wave": [
         ["Spore_1", "Spore_2"],
-        ["Spore_3", "Spore_3", "Spore_3"],
-        ["Spore_1", "Spore_4", "Spore_3", "Spore_2", "Spore_1", "Spore_4"],
         ["Spore_1", "Spore_4", "Spore_1", "Spore_4", "Spore_1", "Spore_2"],
         ["Spore_3", "Spore_1", "Spore_2"],
+        ["Premature_3"],
+        ["Spore_4", "Spore_4", "Spore_4", "Spore_1", "Spore_1", "Spore_1"],
         ["Premature_2"]
       ],
       "briefing": [
