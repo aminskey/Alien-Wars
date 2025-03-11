@@ -251,6 +251,7 @@ class Level():
             "Spore_2": Spore_2,
             "Spore_3": Spore_3,
             "Spore_4": Spore_4,
+            "Spore_5": Spore_5,
             "Premature_1": Premature_1,
             "Premature_2": Premature_2,
             "Premature_3": Premature_3
@@ -1073,6 +1074,19 @@ class Spore_Generic(pygame.sprite.Sprite):
         self.weaponType = weaponType
         self.speed = 5
         self.direction = 1
+
+    def separation(self, tooClose, sep_fac):
+        sep_vec = pygame.math.Vector2(0, 0)
+        for sprite in sporeGroup.sprites():
+            if sprite != self:
+                d = dist(self.rect.center, sprite.rect.center)
+                if d <= tooClose:
+                    pos_vec = pygame.math.Vector2(self.rect.centerx - sprite.rect.centerx, self.rect.centery - sprite.rect.centery)
+                    if pos_vec.length() <= 0:
+                        pos_vec = pygame.math.Vector2(1, 1)
+                    sep_vec += pos_vec.normalize() / (d if d > 0 else 1)
+        return sep_vec * sep_fac
+
     def update(self):
         if not isInBounds(self.rect.centery, self.image.get_height() + screen.get_height(), -screen.get_height()//2, self.image.get_height()//2):
             self.kill()
@@ -1080,6 +1094,7 @@ class Spore_Generic(pygame.sprite.Sprite):
             tmp = Explosion(explosion, 3, pos=self.rect.center, sound="SFX/ship-explosion.wav")
             sporeGroup.add(tmp)
             self.kill()
+
 class Spore_1(Spore_Generic):
     def __init__(self, target):
         super().__init__(target, 1, "bomb", points=15)
@@ -1132,8 +1147,11 @@ class Spore_2(Spore_Generic):
         super().update()
 
 class Spore_3(Spore_Generic):
-    def __init__(self, target):
-        super().__init__(target, 3, "bomb")
+    def __init__(self, target, *args):
+        if len(args) > 0:
+            super().__init__(target, *args)
+        else:
+            super().__init__(target, 3, "bomb")
         self.x_dist = 0
         self.y_dist = 0
         self.angle = 0
@@ -1239,6 +1257,44 @@ class Spore_4(Spore_Generic):
             if isInBounds(i, bigBound, smallBound):
                 tmp = Gun(None, ((i * self.image.get_width()/(num)), self.rect.centery), 1, staticAngle=self.gunAngle)
                 self.turrets.append(tmp)
+
+class Spore_5(Spore_3):
+    count = 1
+    def __init__(self, target):
+        super().__init__(target, 5, "standard")
+        self.base = self.image.copy()
+        self.spawnPrep()
+
+    def spawnPrep(self):
+        vec = pygame.math.Vector2(-screen.get_width()//2, -screen.get_height()//2)
+        vec.rotate_ip((Spore_5.count/6) * 360)
+
+        self.rect.midtop = screen.get_rect().center + vec
+        Spore_5.count += 1
+
+    def update(self):
+        self.get_dist()
+        self.get_angle()
+
+        vec = pygame.math.Vector2(self.x_dist, self.y_dist)
+        vec = vec.normalize() if vec.length() > 0 else vec
+
+        pos = self.rect.center
+        self.image = pygame.transform.rotate(self.base, self.angle + 90)
+        self.rect = self.image.get_rect()
+        self.rect.scale_by_ip(0.75, 0.75)
+
+        self.rect.center = pos + vec
+        self.rect.center += self.separation(200, 10)
+
+
+        if self.health <= 0:
+            tmp = Explosion(explosion, 3, pos=self.rect.center, sound="SFX/ship-explosion.wav")
+            sporeGroup.add(tmp)
+            self.kill()
+
+
+
 class Explosion(pygame.sprite.Sprite):
     def __init__(self, seq, size=1, speed=1, pos=(0, 0), loop=False, sound=None):
         super().__init__()
@@ -1896,7 +1952,7 @@ def startScreen():
                     exit()
                 elif options[opIndex] == indev:
                     tmp = Player("cobra")
-                    tmp.levelIndex = 2
+                    tmp.levelIndex = 1
 
                     briefingRoom(tmp, True)
                     startScreen()

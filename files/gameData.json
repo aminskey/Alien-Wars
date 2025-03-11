@@ -84,9 +84,9 @@
       "cloudType": "meteor",
       "icon": "levels/icons/meteor.png",
       "wave": [
-        ["Spore_1", "Spore_1", "Spore_1"],
+        ["Spore_5", "Spore_5", "Spore_5", "Spore_5"],
         ["Spore_3", "Spore_4", "Spore_2"],
-        ["Spore_1", "Spore_4", "Spore_2"],
+        ["Spore_1", "Spore_4", "Spore_2", "Spore_5", "Spore_5", "Spore_5", "Spore_5"],
         ["Spore_2", "Spore_2", "Spore_1", "Spore_4", "Spore_2"]
       ],
       "briefing": [
