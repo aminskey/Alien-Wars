@@ -124,29 +124,19 @@ class Player(pygame.sprite.Sprite):
         fireGroup.add(tmp)
         allSprites.add(tmp)
 
-    def move(self, key_read, ver_keys=[K_LEFT, K_RIGHT], hor_keys=[K_UP, K_DOWN]):
-        if key_read[ver_keys[0]]:
+    def move(self, key_read, hor_keys=[K_LEFT, K_RIGHT, K_a, K_d], ver_keys=[K_UP, K_DOWN, K_w, K_s]):
+        if key_read[hor_keys[0]] or key_read[hor_keys[2]]:
             self.rect.x -= self.speed
             self.image = self.left_img
-        if key_read[ver_keys[1]]:
+        if key_read[hor_keys[1]] or key_read[hor_keys[3]]:
             self.rect.x += self.speed
             self.image = self.right_img
-        if key_read[hor_keys[0]]:
+        if key_read[ver_keys[0]] or key_read[ver_keys[2]]:
             self.rect.y -= self.speed
-        if key_read[hor_keys[1]]:
+        if key_read[ver_keys[1]] or key_read[ver_keys[3]]:
             self.rect.y += self.speed
 
     def bombOnClick(self, inKeys, button=K_f):
-        if inKeys[button]:
-            if self.bombCooldown <= 0 and self.bombs > 0:
-                # Play drop sound effect
-                bombSFX.play(self.bombSound)
-
-                # has bomb been thrown??
-                self.bombDown = True
-
-                # set bombCooldown to zero
-                self.bombCooldown = 0
         # If bomb has been thrown, and the amount of frames gone is equal to the length in seconds*fps of the song. Explode!!!
         if self.bombCooldown < -self.bombSound.get_length()*FPS and self.bombDown:
             # decrease num of bombs
@@ -168,10 +158,13 @@ class Player(pygame.sprite.Sprite):
 
                     # does the sprite have a health tag??
                     if hasattr(sprite, "health"):
-                        # checking if the sprite is invincable or not
-                        if not hasattr(sprite, "invincable"):
+                        # checking if the sprite is invincible or not
+                        if not hasattr(sprite, "invincible"):
                             # if not then deal damage
                             sprite.health -= self.bombDamage
+                        else:
+                            if not sprite.invincible:
+                                sprite.health -= self.bombDamage
                         # is the sprite a coherent to a premature??
                         if hasattr(sprite, "premature"):
                             # if so then deal damage to main body.
@@ -185,6 +178,17 @@ class Player(pygame.sprite.Sprite):
         else:
             # if not, then decrease the cooldown further.
             self.bombCooldown -= 1
+
+        if inKeys[button]:
+            if self.bombCooldown <= 0 and self.bombs > 0:
+                # Play drop sound effect
+                bombSFX.play(self.bombSound)
+
+                # has bomb been thrown??
+                self.bombDown = True
+
+                # set bombCooldown to zero
+                self.bombCooldown = 0
 
     def printLifeCount(self, window=screen):
         im_res = (self.base_image.get_width() // 1.2, self.base_image.get_height() // 1.2)
@@ -385,6 +389,7 @@ class Lazer(pygame.sprite.Sprite):
                 if hasattr(sprite, "premature"):
                     if not sprite.invincible:
                         sprite.premature.health -= self.damage
+                        sprite.health -= self.damage
                 elif hasattr(sprite, "immunity"):
                     if sprite.immunity < 0:
                         sprite.health -= self.damage
@@ -888,7 +893,7 @@ class Premature_2(Premature_1):
 
         self.body.rect.midbottom = (screen.get_width()//2, -screen.get_height())
         self.body.invincible = True
-        self.body.health = kwargs["health"] if "health" in kwargs else 500
+        self.body.health = kwargs["health"] if "health" in kwargs else 700
         self.maxHealth = self.body.health
 
         self.maxCool = 125
@@ -926,7 +931,7 @@ class Premature_2(Premature_1):
             i.genGun("amp", 3, maxCool=self.maxCool)
             i.gun.cooldown = self.coolDown
 
-            i.health += self.body.health * 0.125
+            i.health += self.maxHealth * 0.125
 
             self.maxHealth += i.health
             self.ligaments += 1
@@ -1890,8 +1895,8 @@ def startScreen():
                     pygame.quit()
                     exit()
                 elif options[opIndex] == indev:
-                    tmp = Player("avalanche")
-                    tmp.levelIndex = 0
+                    tmp = Player("cobra")
+                    tmp.levelIndex = 2
 
                     briefingRoom(tmp, True)
                     startScreen()

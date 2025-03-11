@@ -47,6 +47,7 @@
       "wave": [
         ["Spore_2", "Spore_1", "Spore_3"],
         ["Spore_3", "Spore_4", "Spore_1"],
+        ["Spore_2", "Spore_2", "Spore_1", "Spore_4", "Spore_2"],
         ["Spore_2", "Spore_2", "Spore_1", "Spore_4", "Spore_2"]
       ],
       "briefing": [
@@ -108,7 +109,7 @@
       ],
       "boss": "Premature_2",
       "boss_bgm": "BGM/boss-3.ogg",
-      "boss_health": 1000,
+      "boss_health": 700,
       "boss_lazer2": "plasma",
       "boss_speed": 35
     },
