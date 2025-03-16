@@ -84,10 +84,8 @@
       "cloudType": "meteor",
       "icon": "levels/icons/meteor.png",
       "wave": [
-        ["Spore_5", "Spore_5", "Spore_5", "Spore_5"],
-        ["Spore_3", "Spore_4", "Spore_2"],
-        ["Spore_1", "Spore_4", "Spore_2", "Spore_5", "Spore_5"],
-        ["Spore_2", "Spore_2", "Spore_1", "Spore_4", "Spore_2"]
+        ["Spore_5", "Spore_5", "Spore_5", "Spore_5"]
+
       ],
       "briefing": [
         "\\C L A S S I F I E D           M I S S I O N^",
@@ -107,7 +105,7 @@
         "             Approach with caution!!",
         "Accept Mission [ENTER]?"
       ],
-      "boss": "Premature_2",
+      "boss": "Premature_2b",
       "boss_bgm": "BGM/boss-3.ogg",
       "boss_health": 700,
       "boss_lazer2": "plasma",
@@ -126,7 +124,7 @@
         ["Spore_3", "Spore_1", "Spore_2"],
         ["Spore_5", "Spore_5", "Spore_5", "Spore_5", "Spore_5", "Spore_5"],
         ["Premature_3"],
-        ["Spore_4", "Spore_4", "Spore_4", "Spore_1", "Spore_1", "Spore_1"],
+        ["Spore_4", "Spore_4", "Spore_4", "Spore_1", "Spore_1", "Spore_1", "Spore_5", "Spore_5", "Spore_5"],
         ["Premature_2"]
       ],
       "briefing": [
@@ -176,9 +174,9 @@
     },
     "avalanche": {
       "weaponType": "amp",
-      "damage": 5,
+      "damage": 8,
       "bombDamage": 64,
-      "speed": 7
+      "speed": 9
     },
     "bullseye": {
       "weaponType": "standard",
