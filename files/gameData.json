@@ -84,8 +84,10 @@
       "cloudType": "meteor",
       "icon": "levels/icons/meteor.png",
       "wave": [
-        ["Spore_5", "Spore_5", "Spore_5", "Spore_5"]
-
+        ["Spore_5", "Spore_5", "Spore_5", "Spore_5"],
+        ["Spore_4", "Spore_1"],
+        ["Spore_1", "Spore_1", "Spore_1", "Spore_1", "Spore_1"],
+        ["Spore_1", "Spore_2", "Spore_5", "Spore_5"]
       ],
       "briefing": [
         "\\C L A S S I F I E D           M I S S I O N^",
@@ -130,7 +132,6 @@
       "briefing": [
         "\\C L A S S I F I E D           M I S S I O N^",
         "Code Name: Excalibur",
-        "",
         "Situation Overview:",
         "Intel has located the \\nesting base^ of some the Spores.",
         "It is a @rock-like^ object located near @Phobos^.",
