@@ -233,9 +233,9 @@ class Player(pygame.sprite.Sprite):
 
         if self.immunity > 0:
             if self.tick % 4 == 0:
-                self.image.set_alpha(150)
+                self.image.set_alpha(250)
             else:
-                self.image.set_alpha(0)
+                self.image.set_alpha(100)
         else:
             if self.image.get_alpha() < 254:
                 self.image.set_alpha(255)
@@ -627,14 +627,38 @@ class WingUp(PowerUp):
                 self.kill()
         super().update()
 
+class Prema_Armor(pygame.sprite.Sprite):
+    def __init__(self, prema_type, health, resizeFactor=1, points=500, armorType="armor"):
+        super().__init__()
+        buff = pygame.image.load(f"bosses/{prema_type}/{prema_type}-{armorType}.png")
+        self.image = pygame.transform.scale_by(buff, resizeFactor)
+        self.rect = self.image.get_rect()
+
+        self.points = points
+        self.health = health
+
+    def update(self):
+        if self.health <= 0:
+            tmp = Explosion(explosion, 3, pos=self.rect.center, sound="SFX/ship-explosion.wav")
+            part = BrokenPart(self)
+            bgGroup.add(tmp, part)
+            self.kill()
+
 class Prema_Part(pygame.sprite.Sprite):
-    def __init__(self, prema_type, bodypart, target, parent, resizeFactor=1, points=500, health=300):
+    def __init__(self, prema_type, bodypart, target, parent, resizeFactor=1, points=500, health=300, armor=None, stayInvincible=False):
         super().__init__()
         buffer = pygame.image.load(f"bosses/{prema_type}/{prema_type}-{bodypart}.png")
         self.image = pygame.transform.scale_by(buffer, resizeFactor)
         self.rect = self.image.get_rect()
 
+        self.armor = None
         self.invincible = False
+        self.stayInvincible = stayInvincible
+
+        if isinstance(armor, str):
+            self.invincible = True
+            self.armor = Prema_Armor(prema_type, 200, resizeFactor, armorType=armor)
+
         self.points = points
 
         self.bodypart = bodypart
@@ -685,6 +709,11 @@ class Prema_Part(pygame.sprite.Sprite):
                 for player in playerGroup.sprites():
                     if dist(player.rect.center, self.gun.rect.center) < 250:
                         self.gun.fire()
+        if self.armor != None:
+            if self.armor.health > 0:
+                self.armor.rect.center = self.rect.center
+            else:
+                self.invincible = False if not self.stayInvincible else True
 
     def draw(self, window):
         window.blit(self.image, self.rect)
@@ -848,6 +877,8 @@ class Premature_1:
 
         if self.ligaments <= 0:
             self.body.invincible = False
+        else:
+            self.body.invincible = True
         self.positioning()
 
         if self.body.health > 0:
@@ -886,7 +917,7 @@ class Premature_2(Premature_1):
         self.counter = 0
         self.resizeFactor = 3
         self.type = kwargs["type"] if "type" in kwargs else "Premature_2"
-        self.body = Prema_Part(self.type, "body", target, self, self.resizeFactor, 800)
+        self.body = Prema_Part(self.type, "body", target, self, self.resizeFactor, 800, armor=kwargs["armorType"] if "armorType" in kwargs else None)
 
         self.weakspot_map = pygame.image.load(f"bosses/{self.type}/{self.type}-weakspotmap.png")
         self.map_rect = self.weakspot_map.get_rect()
@@ -1013,28 +1044,32 @@ class Premature_2(Premature_1):
 class Premature_2b(Premature_2):
     def __init__(self, target, *args, **kwargs):
         self.armor = []
-        super().__init__(target, *args, **kwargs, type="Premature_2b")
+        super().__init__(target, *args, **kwargs, type="Premature_2b", armorType="head-armor")
 
     def body_setup(self):
-        self.lig_left = [Prema_Part(self.type, "center", self.target, self, self.resizeFactor, points=500)]
-        self.lig_right = [Prema_Part(self.type, "center", self.target, self, self.resizeFactor, points=500)]
 
-        self.lig_left.append(Prema_Part(self.type, "left-corner", self.target, self, self.resizeFactor, points=500))
-        self.lig_left.append(Prema_Part(self.type, "center-mid", self.target, self, self.resizeFactor, points=500))
-        self.lig_left.append(Prema_Part(self.type, "up", self.target, self, self.resizeFactor, points=500))
+        self.body.armor = Prema_Armor(self.type, 400, self.resizeFactor, armorType="head-armor")
 
-        self.lig_right.append(Prema_Part(self.type, "right-corner", self.target, self, self.resizeFactor, points=500))
-        self.lig_right.append(Prema_Part(self.type, "center-mid", self.target, self, self.resizeFactor, points=500))
-        self.lig_right.append(Prema_Part(self.type, "up", self.target, self, self.resizeFactor, points=500))
+        self.lig_left = [Prema_Part(self.type, "center", self.target, self, self.resizeFactor, points=500, armor="armor")]
+        self.lig_right = [Prema_Part(self.type, "center", self.target, self, self.resizeFactor, points=500, armor="armor")]
+
+        self.lig_left.append(Prema_Part(self.type, "left-corner", self.target, self, self.resizeFactor, points=500, armor="armor"))
+        self.lig_left.append(Prema_Part(self.type, "center-mid", self.target, self, self.resizeFactor, points=500, armor="armor"))
+        self.lig_left.append(Prema_Part(self.type, "up", self.target, self, self.resizeFactor, points=500, armor="armor"))
+
+        self.lig_right.append(Prema_Part(self.type, "right-corner", self.target, self, self.resizeFactor, points=500, armor="armor"))
+        self.lig_right.append(Prema_Part(self.type, "center-mid", self.target, self, self.resizeFactor, points=500, armor="armor"))
+        self.lig_right.append(Prema_Part(self.type, "up", self.target, self, self.resizeFactor, points=500, armor="armor"))
 
 
+        """
         for i in range(len(self.lig_left)*2):
             tmp = Prema_Part(self.type, "armor", self.target, self, self.resizeFactor, points=500, health=50)
             tmp.health += self.maxHealth * 0.125
 
             self.armor.append(tmp)
             self.maxHealth += tmp.health
-
+        """
 
         for i in self.lig_left + self.lig_right:
             i.genGun("amp", 3, maxCool=self.maxCool)
@@ -1055,8 +1090,9 @@ class Premature_2b(Premature_2):
             else:
                 lig.rect.midtop = self.lig_left[i - 1].rect.midbottom
 
-            if self.armor[i] != None:
-                self.armor[i].rect.center = lig.rect.center
+            if i < len(self.armor):
+                if self.armor[i] != None:
+                    self.armor[i].rect.center = lig.rect.center
             #self.armor[i].health = lig.health
 
 
@@ -1073,8 +1109,9 @@ class Premature_2b(Premature_2):
             else:
                 lig.rect.midtop = self.lig_right[i - 1].rect.midbottom
 
-            if self.armor[i + len(self.lig_left)] != None:
-                self.armor[i + len(self.lig_left)].rect.center = lig.rect.center
+            if i + len(self.lig_left) < len(self.armor):
+                if self.armor[i + len(self.lig_left)] != None:
+                    self.armor[i + len(self.lig_left)].rect.center = lig.rect.center
             #self.armor[i + len(self.lig_left)].health = lig.health
 
             if lig.health <= 0:
@@ -2401,12 +2438,18 @@ def main(level, p1):
 
                             healthBarGroup.add(spore.healthbar)
                             sporeGroup.add(spore.body)
+                            if spore.body.armor != None:
+                                sporeGroup.add(spore.body.armor)
                             for i in (spore.lig_left + spore.lig_right):
                                 sporeGroup.add(i)
+                                if i.armor != None:
+                                    sporeGroup.add(i.armor)
+                            """
                             if hasattr(spore, "armor"):
                                 for i in spore.armor:
                                     print("adding armor")
                                     sporeGroup.add(i)
+                            """
                     else:
                         spore = sporeObj(p1)
                         sporeGroup.add(spore)
@@ -2577,12 +2620,18 @@ def main(level, p1):
 
             if count > FPS*11:
                 sporeGroup.add(prema.body)
+                if prema.body.armor != None:
+                    sporeGroup.add(prema.body.armor)
                 healthBarGroup.add(prema.healthbar)
                 for p in prema.lig_left + prema.lig_right:
                     sporeGroup.add(p)
+                    if p.armor != None:
+                        sporeGroup.add(p.armor)
+                """
                 if hasattr(prema, "armor"):
                     for a in prema.armor:
                         sporeGroup.add(a)
+                """
 
                 count = 0
                 bossMode = True
