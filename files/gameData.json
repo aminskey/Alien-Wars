@@ -121,7 +121,14 @@
       "cloudType": "meteor",
       "icon": "levels/icons/nesting-base.png",
       "wave": [
-        ["Spore_1"]
+        ["Spore_1", "Spore_2"],
+        ["Spore_1", "Spore_4", "Spore_1", "Spore_4", "Spore_1", "Spore_2"],
+        ["Spore_3", "Spore_1", "Spore_2"],
+        ["Spore_5", "Spore_5", "Spore_5", "Spore_5", "Spore_5", "Spore_5"],
+        ["Premature_2"],
+        ["Spore_5", "Spore_3", "Spore_1", "Spore_2"],
+        ["Spore_4", "Spore_4", "Spore_4", "Spore_1", "Spore_1", "Spore_1", "Spore_5", "Spore_5", "Spore_5"]
+
       ],
       "briefing": [
         "\\C L A S S I F I E D           M I S S I O N^",
