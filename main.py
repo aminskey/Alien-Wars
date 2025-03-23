@@ -2,6 +2,7 @@ import pygame, cv2
 import random, math
 import os, numpy as np
 import json
+import time
 
 from pygame.locals import *
 
@@ -244,7 +245,7 @@ class Player(pygame.sprite.Sprite):
         self.move(keys)
         self.rectifyPos()
 
-class Level():
+class Level:
     def __init__(self, level):
         sporeDict = {
             "Spore_1": Spore_1,
@@ -281,6 +282,7 @@ class Level():
         self.bossName = data["boss"]
         self.boss = sporeDict[self.bossName]
         self.bossBGM = data["boss_bgm"]
+        self.limbGuns = data["boss_guns"] if "boss_guns" in data else False
 
         self.wave = []
         self.pause = False
@@ -359,7 +361,7 @@ class Text(pygame.sprite.Sprite):
         self.image.set_alpha(self.alphaValue)
 
 class Lazer(pygame.sprite.Sprite):
-    def __init__(self, l_type="standard", damage=10, mount_point=(0,0), speed=10, angle=90, sizeFactor=1):
+    def __init__(self, l_type="standard", damage=10, mount_point=(0,0), speed=10, angle=90, sizeFactor=1, lifetime=60):
         super().__init__()
         laser = pygame.image.load(f"lazers/{l_type}.png")
         self.copy = pygame.transform.scale_by(laser, sizeFactor)
@@ -377,12 +379,18 @@ class Lazer(pygame.sprite.Sprite):
         self.sender = None
         self.oppGroup = None
         self.damage = damage
+        self.spawnTime = time.time()
+        self.expireTime = self.spawnTime + lifetime
 
     def update(self):
         self.rect.center += self.vel
 
         if not isInBounds(self.rect.x, screen.get_width(), 0) or not isInBounds(self.rect.y, screen.get_height(), 0):
             self.kill()
+
+        die = False
+        if time.time() >= self.expireTime:
+            die = True
 
         if pygame.sprite.spritecollideany(self, self.oppGroup):
             sprite = pygame.sprite.spritecollideany(self, self.oppGroup)
@@ -402,10 +410,10 @@ class Lazer(pygame.sprite.Sprite):
                 if sprite.health <= 0:
                     if hasattr(self.sender, "points"):
                         self.sender.points += sprite.points
-            if die:
-                exp = Explosion(explosion, self.sizeFactor, 3, self.rect.center)
-                fireGroup.add(exp)
-                self.kill()
+        if die:
+            exp = Explosion(explosion, self.sizeFactor, 3, self.rect.center)
+            fireGroup.add(exp)
+            self.kill()
 
 
 class dummySprite(pygame.sprite.Sprite):
@@ -673,11 +681,11 @@ class Prema_Part(pygame.sprite.Sprite):
         self.gun = None
         self.bulletSize = 0
 
-    def genGun(self, gunType, size, maxCool=75, damage=25, bulletSize=0.5):
+    def genGun(self, gunType, size, maxCool=75, damage=25, bulletSize=0.5, speed=5):
         self.gun = Gun(self.target, self.rect.center, size, type=gunType)
         self.gun.sender = self.parent
         self.gun.oppGroup = self.oppGroup
-        self.gun.lazerSpeed = 5
+        self.gun.lazerSpeed = speed
         self.gun.damage = damage
         self.gun.maxCool = maxCool
         self.bulletSize = bulletSize
@@ -764,7 +772,7 @@ class BrokenPart(pygame.sprite.Sprite):
 
 
 class Premature_1:
-    def __init__(self, target, resizeFactor=1, oppGroup=playerGroup, health=500, legs=3, lazertype="standard"):
+    def __init__(self, target, resizeFactor=1, oppGroup=playerGroup, health=500, legs=3, lazertype="standard", gunMode=False):
         self.type = "Premature_1"
         self.body = Prema_Part(self.type, "body", target, self, resizeFactor, 300)
 
@@ -797,6 +805,7 @@ class Premature_1:
         self.lig_left = []
         self.lig_right = []
         self.ligaments = 0
+        self.limbGunOn = gunMode
 
         for i in range(legs):
             left = Prema_Part(self.type, "ligament-left", target, self, resizeFactor, 150)
@@ -805,6 +814,10 @@ class Premature_1:
             if i >= 3:
                 left.rect = Rect(0, 0, left.rect.width, left.rect.height // 10)
                 right.rect = Rect(0, 0, right.rect.width, right.rect.height // 10)
+
+            if self.limbGunOn:
+                left.genGun("bomb", resizeFactor, speed=2)
+                right.genGun("bomb", resizeFactor, speed=2)
 
             self.lig_left.append(left)
             self.lig_right.append(right)
@@ -821,7 +834,7 @@ class Premature_1:
         #self.healthbar.rect.topright = screen.get_rect().topright
 
     def fire(self, type, angle, speed=2):
-        tmp = Lazer(type, 15, self.body.rect.center + pygame.math.Vector2(0, self.body.image.get_height()//5), speed, angle, 0.75)
+        tmp = Lazer(type, 15, self.body.rect.center + pygame.math.Vector2(0, self.body.image.get_height()//5), speed, angle, 0.75, lifetime=30)
         tmp.sender = self
         tmp.oppGroup = playerGroup
 
@@ -905,6 +918,10 @@ class Premature_1:
 
     def draw_gun(self, window):
         window.blit(self.main_gun.image, self.main_gun.rect)
+        for i in self.lig_left + self.lig_right:
+            if i.gun is not None and i.health > 0:
+                i.draw_premagun(window)
+
 
 class Premature_2(Premature_1):
     units = 0
@@ -1233,7 +1250,7 @@ class Spore_1(Spore_Generic):
         self.maxCool = 50
         self.cooldown = 5
     def fire(self):
-        tmp = Lazer(self.weaponType, 10, self.rect.midbottom, random.randint(-3, 3), random.randint(-90, 90), 0.4)
+        tmp = Lazer(self.weaponType, 10, self.rect.midbottom, random.randint(-3, 3), random.randint(-90, 90), 0.4, lifetime=2)
         tmp.sender = self
         tmp.oppGroup = self.oppGroup
 
@@ -2080,8 +2097,8 @@ def startScreen():
                     pygame.quit()
                     exit()
                 elif options[opIndex] == indev:
-                    tmp = Player("avalanche")
-                    tmp.levelIndex = 1
+                    tmp = Player("cobra")
+                    tmp.levelIndex = 2
 
                     briefingRoom(tmp, True)
                     startScreen()
@@ -2326,7 +2343,7 @@ def main(level, p1):
     playerGroup.add(p1)
     allSprites.add(p1)
 
-    prema = level.boss(p1, 3, health=level.boss_health, legs=level.boss_legs, lazertype=level.boss_lazer1)
+    prema = level.boss(p1, 3, health=level.boss_health, legs=level.boss_legs, lazertype=level.boss_lazer1, gunMode=level.limbGuns)
 
     healthBar = HealthBar(p1)
     healthBarGroup.add(healthBar)

@@ -121,13 +121,7 @@
       "cloudType": "meteor",
       "icon": "levels/icons/nesting-base.png",
       "wave": [
-        ["Spore_1", "Spore_2"],
-        ["Spore_1", "Spore_4", "Spore_1", "Spore_4", "Spore_1", "Spore_2"],
-        ["Spore_3", "Spore_1", "Spore_2"],
-        ["Spore_5", "Spore_5", "Spore_5", "Spore_5", "Spore_5", "Spore_5"],
-        ["Premature_3"],
-        ["Spore_4", "Spore_4", "Spore_4", "Spore_1", "Spore_1", "Spore_1", "Spore_5", "Spore_5", "Spore_5"],
-        ["Premature_2"]
+        ["Spore_1"]
       ],
       "briefing": [
         "\\C L A S S I F I E D           M I S S I O N^",
@@ -157,11 +151,12 @@
       "boss_health": 1800,
       "boss_lazer1": "amp",
       "boss_lazer2": "plasma",
-      "boss_legs": 5
+      "boss_legs": 5,
+      "boss_guns": true
     }
   },
   "credits": [
-    "And as the hero struggled to vanquish the evil forces",
+    "And as the hero struggled to vanquish the forces of evil",
     "He Can Now Find peace in his heart, knowing that everyone",
     "will be free.",
     ""
@@ -188,6 +183,13 @@
   },
 
   "__comments": [
+    ["Spore_1", "Spore_2"],
+    ["Spore_1", "Spore_4", "Spore_1", "Spore_4", "Spore_1", "Spore_2"],
+    ["Spore_3", "Spore_1", "Spore_2"],
+    ["Spore_5", "Spore_5", "Spore_5", "Spore_5", "Spore_5", "Spore_5"],
+    ["Premature_3"],
+    ["Spore_4", "Spore_4", "Spore_4", "Spore_1", "Spore_1", "Spore_1", "Spore_5", "Spore_5", "Spore_5"],
+    ["Premature_2"],
     ["Spore_4", "Spore_1"],
     ["Spore_1", "Spore_1", "Spore_1", "Spore_1", "Spore_1"],
     ["Spore_1", "Spore_2"],
