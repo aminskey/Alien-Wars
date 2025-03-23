@@ -283,6 +283,8 @@ class Level:
         self.boss = sporeDict[self.bossName]
         self.bossBGM = data["boss_bgm"]
         self.limbGuns = data["boss_guns"] if "boss_guns" in data else False
+        self.worry = data["worry"] if "worry" in data else False
+        self.shadeOn = False
 
         self.wave = []
         self.pause = False
@@ -1045,8 +1047,15 @@ class Premature_2(Premature_1):
                 self.level.pause = False
                 #self.level.waveIndex += 1
 
-                pygame.mixer.music.load("BGM/worry.ogg")
-                pygame.mixer.music.play(-1)
+                if self.level.worry:
+                    pygame.mixer.music.load("BGM/worry.ogg")
+                    pygame.mixer.music.play(-1)
+
+                    self.level.speed = self.level.boss_speed - 1 if self.level.boss_speed > 1 else 0.5
+                    self.level.shadeOn = True
+                else:
+                    pygame.mixer.music.load(self.level.bgm)
+                    pygame.mixer.music.play(-1)
 
         super().update(type)
 
@@ -2383,7 +2392,7 @@ def main(level, p1):
 
     shade_layer = pygame.Surface(screen.get_size())
     shade_layer.fill(BLACK)
-    shade_layer.set_alpha(150)
+    shade_layer.set_alpha(80)
 
     pygame.mixer.music.load(level.bgm)
     pygame.mixer.music.play(-1)
@@ -2587,6 +2596,9 @@ def main(level, p1):
         if not bossMode or bossDead:
             fireGroup.draw(screen)
 
+        if level.shadeOn:
+            screen.blit(shade_layer, (0, 0))
+
         playerGroup.draw(screen)
 
         if not bossDead:
@@ -2617,6 +2629,8 @@ def main(level, p1):
         p1.printBombCount()
 
         if warningMode:
+            level.shadeOn = False
+            shade_layer.set_alpha(150)
             for sprite in powerUpGroup.sprites():
                 sprite.kill()
 

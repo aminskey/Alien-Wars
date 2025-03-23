@@ -127,6 +127,8 @@
         ["Spore_5", "Spore_5", "Spore_5", "Spore_5", "Spore_5", "Spore_5"],
         ["Premature_2"],
         ["Spore_5", "Spore_3", "Spore_1", "Spore_2"],
+        ["Spore_4", "Spore_4", "Spore_4", "Spore_1", "Spore_1", "Spore_1", "Spore_5", "Spore_5", "Spore_5"],
+        ["Spore_5", "Spore_3", "Spore_1", "Spore_2"],
         ["Spore_4", "Spore_4", "Spore_4", "Spore_1", "Spore_1", "Spore_1", "Spore_5", "Spore_5", "Spore_5"]
 
       ],
@@ -159,7 +161,8 @@
       "boss_lazer1": "amp",
       "boss_lazer2": "plasma",
       "boss_legs": 5,
-      "boss_guns": true
+      "boss_guns": true,
+      "worry": true
     }
   },
   "credits": [
