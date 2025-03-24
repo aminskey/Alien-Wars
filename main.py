@@ -284,6 +284,7 @@ class Level:
         self.bossBGM = data["boss_bgm"]
         self.limbGuns = data["boss_guns"] if "boss_guns" in data else False
         self.worry = data["worry"] if "worry" in data else False
+        self.worrySpeed = 1
         self.shadeOn = False
 
         self.wave = []
@@ -1051,7 +1052,7 @@ class Premature_2(Premature_1):
                     pygame.mixer.music.load("BGM/worry.ogg")
                     pygame.mixer.music.play(-1)
 
-                    self.level.speed = self.level.boss_speed - 1 if self.level.boss_speed > 1 else 0.5
+                    self.level.worrySpeed = self.level.boss_speed - 1 if self.level.boss_speed > 1 else 1
                     self.level.shadeOn = True
                 else:
                     pygame.mixer.music.load(self.level.bgm)
@@ -2392,7 +2393,8 @@ def main(level, p1):
 
     shade_layer = pygame.Surface(screen.get_size())
     shade_layer.fill(BLACK)
-    shade_layer.set_alpha(80)
+    shade_layer.set_alpha(0)
+    a = 0
 
     pygame.mixer.music.load(level.bgm)
     pygame.mixer.music.play(-1)
@@ -2485,7 +2487,7 @@ def main(level, p1):
                 tmp = powerUpTypes[random.randint(0, len(powerUpTypes)-1)]
                 pUp = tmp() if tmp != WingUp else tmp(p1)
 
-                if len(wingmanGroup.sprites()) and isinstance(pUp, WingUp):
+                if len(wingmanGroup.sprites()) > 1 and isinstance(pUp, WingUp):
                     continue
 
                 if not pygame.sprite.spritecollideany(pUp, powerUpGroup):
@@ -2598,6 +2600,12 @@ def main(level, p1):
 
         if level.shadeOn:
             screen.blit(shade_layer, (0, 0))
+            if a < 80:
+                a += 0.25
+            shade_layer.set_alpha(int(a))
+
+            if level.speed > level.worrySpeed:
+                level.speed -= 0.25
 
         playerGroup.draw(screen)
 
