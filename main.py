@@ -12,6 +12,7 @@ pygame.init()
 screen = pygame.display.set_mode((900, 600), SCALED | FULLSCREEN)
 #screen = pygame.display.set_mode((900, 600))
 pygame.display.set_caption(gameTitle)
+pygame.display.set_icon(pygame.image.load("enemies/Spore-2.png"))
 
 clock = pygame.time.Clock()
 FPS = 60
@@ -1071,11 +1072,12 @@ class Premature_2(Premature_1):
 class Premature_2b(Premature_2):
     def __init__(self, target, *args, **kwargs):
         self.armor = []
-        super().__init__(target, *args, **kwargs, type="Premature_2b", armorType="head-armor")
+        super().__init__(target, *args, **kwargs, type="Premature_2b")
 
     def body_setup(self):
 
         self.body.armor = Prema_Armor(self.type, 400, self.resizeFactor, armorType="head-armor")
+        self.body.stayInvincible = True
 
         self.lig_left = [Prema_Part(self.type, "center", self.target, self, self.resizeFactor, points=500, armor="armor")]
         self.lig_right = [Prema_Part(self.type, "center", self.target, self, self.resizeFactor, points=500, armor="armor")]
@@ -2108,7 +2110,7 @@ def startScreen():
                     exit()
                 elif options[opIndex] == indev:
                     tmp = Player("cobra")
-                    tmp.levelIndex = 2
+                    tmp.levelIndex = 1
 
                     briefingRoom(tmp, True)
                     startScreen()
@@ -2689,4 +2691,5 @@ def main(level, p1):
         clock.tick(FPS)
         count += 1
 
-startScreen()
+if __name__ == '__main__':
+    startScreen()
