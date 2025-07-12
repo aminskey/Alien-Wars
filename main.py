@@ -10,9 +10,8 @@ gameTitle = "Alien Wars"
 
 pygame.init()
 screen = pygame.display.set_mode((900, 600), SCALED | FULLSCREEN)
-#screen = pygame.display.set_mode((900, 600))
 pygame.display.set_caption(gameTitle)
-pygame.display.set_icon(pygame.image.load("enemies/Spore-2.png"))
+pygame.display.set_icon(pygame.image.load("enemies/Spore-5.png"))
 
 clock = pygame.time.Clock()
 FPS = 60
@@ -29,8 +28,8 @@ bgGroup = pygame.sprite.Group()
 wingmanGroup = pygame.sprite.Group()
 powerUpGroup = pygame.sprite.Group()
 bossGroup = pygame.sprite.Group()
+miscSprites = pygame.sprite.Group()
 allSprites = pygame.sprite.Group()
-
 
 sfxChannel = pygame.mixer.Channel(0)
 bombSFX = pygame.mixer.Channel(1)
@@ -38,7 +37,6 @@ msgChannel = pygame.mixer.Channel(2)
 explosionChannel = pygame.mixer.Channel(3)
 
 pygame.mixer.set_num_channels(16)
-
 pygame.mouse.set_visible(0)
 
 debug = False
@@ -63,20 +61,19 @@ class Cloud(pygame.sprite.Sprite):
         else:
             objects = os.listdir(f"levels/fgObjects/{type}")
             self.image = pygame.image.load(f"levels/fgObjects/{type}/{objects[random.randint(0, len(objects) - 1)]}")
-        self.rect = self.image.get_rect()
 
+        self.rect = self.image.get_rect()
         self.rect.midbottom = (random.randint(0, screen.get_width()), random.randint(-screen.get_height(), 0))
+
     def update(self, speed=2):
         self.rect.y += speed
         if self.rect.midtop[1] > screen.get_height():
             self.rect.y = -self.image.get_height()
             self.rect.x = random.randint(0, screen.get_width())
 
-
 class Player(pygame.sprite.Sprite):
     def __init__(self, name):
         super().__init__()
-
         playerData = gameData["players"][name]
 
         self.base_image = pygame.image.load(f"player/{name}/{name}.png")
@@ -87,7 +84,7 @@ class Player(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.speed = playerData["speed"] if "speed" in playerData else 5
         self.points = 0
-        self.immunity = FPS*1 # 1 second
+        self.immunity = FPS # 1 second
         self.tick = 0
 
         self.left_img = pygame.image.load(f"player/{name}/{name}-left.png")
@@ -124,6 +121,7 @@ class Player(pygame.sprite.Sprite):
         tmp.sender = self
         tmp.oppGroup = sporeGroup
         fireGroup.add(tmp)
+        miscSprites.add(tmp)
         allSprites.add(tmp)
 
     def move(self, key_read, hor_keys=[K_LEFT, K_RIGHT, K_a, K_d], ver_keys=[K_UP, K_DOWN, K_w, K_s]):
@@ -157,6 +155,7 @@ class Player(pygame.sprite.Sprite):
                 if not isinstance(sprite, Explosion):
                     boom = Explosion(explosion, 1, 1, sprite.rect.center)
                     sporeGroup.add(boom)
+                    allSprites.add(boom)
 
                     # does the sprite have a health tag??
                     if hasattr(sprite, "health"):
@@ -226,6 +225,7 @@ class Player(pygame.sprite.Sprite):
         if self.health <= 0:
             tmp = Explosion(explosion, 2, 1, self.rect.center, False, "SFX/ship-explosion.wav")
             playerGroup.add(tmp)
+            allSprites.add(tmp)
 
             self.lives -= 1
             if self.lives > 0:
@@ -415,8 +415,10 @@ class Lazer(pygame.sprite.Sprite):
                     if hasattr(self.sender, "points"):
                         self.sender.points += sprite.points
         if die:
+            #pygame.mixer.Sound("SFX/laser2.wav").play()
             exp = Explosion(explosion, self.sizeFactor, 3, self.rect.center)
             fireGroup.add(exp)
+            allSprites.add(exp)
             self.kill()
 
 
@@ -495,8 +497,8 @@ class Gun(pygame.sprite.Sprite):
         tmp.sender = self.sender
         tmp.oppGroup = self.oppGroup
 
-        fireGroup.add(exp)
-        fireGroup.add(tmp)
+        fireGroup.add(exp. tmp)
+        allSprites.add(exp, tmp)
 
     def rotate(self):
         self.image = pygame.transform.rotate(self.image_cp, self.angle)
@@ -634,8 +636,8 @@ class WingUp(PowerUp):
                 wing1.side = "Left"
                 wing2.side = "Right"
 
-                wingmanGroup.add(wing1)
-                wingmanGroup.add(wing2)
+                wingmanGroup.add(wing1, wing2)
+                allSprites.add(wing1, wing2)
                 self.kill()
         super().update()
 
@@ -654,6 +656,7 @@ class Prema_Armor(pygame.sprite.Sprite):
             tmp = Explosion(explosion, 3, pos=self.rect.center, sound="SFX/ship-explosion.wav")
             part = BrokenPart(self)
             bgGroup.add(tmp, part)
+            allSprites.add(tmp, part)
             self.kill()
 
 class Prema_Part(pygame.sprite.Sprite):
@@ -707,10 +710,12 @@ class Prema_Part(pygame.sprite.Sprite):
             if not pygame.sprite.spritecollideany(pUp, powerUpGroup):
                 pUp.rect.center = self.rect.center
                 powerUpGroup.add(pUp)
+                allSprites.add(pUp)
 
             tmp = Explosion(explosion, 3, pos=self.rect.center, sound="SFX/ship-explosion.wav")
             part = BrokenPart(self)
             bgGroup.add(tmp, part)
+            allSprites.add(tmp, part)
             self.kill()
         elif isinstance(self.gun, Gun):
             self.gun.mountpoint = self.rect.center
@@ -843,11 +848,13 @@ class Premature_1:
         tmp.oppGroup = playerGroup
 
         fireGroup.add(tmp)
+        allSprites.add(tmp)
 
     def spawn_spore(self, spore):
         tmp = spore(self.target)
         if tmp.rect.midbottom[1] < screen.get_height()//2:
             sporeGroup.add(tmp)
+            allSprites.add(tmp)
 
     def place_ligaments(self):
         for i, left in enumerate(self.lig_left):
@@ -1047,7 +1054,6 @@ class Premature_2(Premature_1):
         if self.health <= 0:
             if self.level:
                 self.level.pause = False
-                #self.level.waveIndex += 1
 
                 if self.level.worry:
                     pygame.mixer.music.load("BGM/worry.ogg")
@@ -1075,7 +1081,6 @@ class Premature_2b(Premature_2):
         super().__init__(target, *args, **kwargs, type="Premature_2b")
 
     def body_setup(self):
-
         self.body.armor = Prema_Armor(self.type, 400, self.resizeFactor, armorType="head-armor")
         self.body.stayInvincible = True
 
@@ -1090,15 +1095,6 @@ class Premature_2b(Premature_2):
         self.lig_right.append(Prema_Part(self.type, "center-mid", self.target, self, self.resizeFactor, points=500, armor="armor"))
         self.lig_right.append(Prema_Part(self.type, "up", self.target, self, self.resizeFactor, points=500, armor="armor"))
 
-
-        """
-        for i in range(len(self.lig_left)*2):
-            tmp = Prema_Part(self.type, "armor", self.target, self, self.resizeFactor, points=500, health=50)
-            tmp.health += self.maxHealth * 0.125
-
-            self.armor.append(tmp)
-            self.maxHealth += tmp.health
-        """
 
         for i in self.lig_left + self.lig_right:
             i.genGun("amp", 3, maxCool=self.maxCool)
@@ -1122,7 +1118,6 @@ class Premature_2b(Premature_2):
             if i < len(self.armor):
                 if self.armor[i] != None:
                     self.armor[i].rect.center = lig.rect.center
-            #self.armor[i].health = lig.health
 
 
             if lig.health <= 0:
@@ -1141,7 +1136,6 @@ class Premature_2b(Premature_2):
             if i + len(self.lig_left) < len(self.armor):
                 if self.armor[i + len(self.lig_left)] != None:
                     self.armor[i + len(self.lig_left)].rect.center = lig.rect.center
-            #self.armor[i + len(self.lig_left)].health = lig.health
 
             if lig.health <= 0:
                 self.lig_right.remove(lig)
@@ -1154,7 +1148,6 @@ class Premature_2b(Premature_2):
 
     def attack(self, type):
         super().attack(type)
-
         if self.ligaments <= 2 and self.ligaments > 0:
             dist = self.target.rect.centerx - self.body.rect.centerx
             self.body.rect.x += dist/abs(dist) * 2 if abs(dist) > 0 else 0
@@ -1251,6 +1244,7 @@ class Spore_Generic(pygame.sprite.Sprite):
         if self.health <= 0:
             tmp = Explosion(explosion, 3, pos=self.rect.center, sound="SFX/ship-explosion.wav")
             sporeGroup.add(tmp)
+            allSprites.add(tmp)
             self.kill()
 
 class Spore_1(Spore_Generic):
@@ -1267,6 +1261,7 @@ class Spore_1(Spore_Generic):
         tmp.oppGroup = self.oppGroup
 
         fireGroup.add(tmp)
+        miscSprites.add(tmp)
         allSprites.add(tmp)
     def update(self):
         if self.cooldown > 0:
@@ -1292,6 +1287,7 @@ class Spore_2(Spore_Generic):
         tmp.oppGroup = self.oppGroup
 
         fireGroup.add(tmp)
+        miscSprites.add(tmp)
         allSprites.add(tmp)
     def update(self):
         self.rect.y += self.speed
@@ -1342,6 +1338,7 @@ class Spore_3(Spore_Generic):
         tmp.oppGroup = playerGroup
 
         fireGroup.add(tmp)
+        miscSprites.add(tmp)
         allSprites.add(tmp)
     def update(self):
         if self.rect.midbottom[1] < 0:
@@ -1449,9 +1446,8 @@ class Spore_5(Spore_3):
         if self.health <= 0:
             tmp = Explosion(explosion, 3, pos=self.rect.center, sound="SFX/ship-explosion.wav")
             sporeGroup.add(tmp)
+            allSprites.add(tmp)
             self.kill()
-
-
 
 class Explosion(pygame.sprite.Sprite):
     def __init__(self, seq, size=1, speed=1, pos=(0, 0), loop=False, sound=None):
@@ -1555,9 +1551,6 @@ def drawScanlines(thickness, alpha, window):
 
             window.blit(tmp, (0, i))
 
-def meanValue(list):
-    return sum(list)/len(list)
-
 def readVideo(file, window=None, threshold=-1, colorKey=WHITE, MaxFrames=-1, frameSkip=-1):
     video = cv2.VideoCapture(file)
     w, h = video.read()[1].shape[1::-1]
@@ -1608,7 +1601,7 @@ players = [
 # Which keys to use (see def showKeyMapping())
 keymapping = [
     ["misc/key-1.png", "Fire bombs"],
-    ["misc/key-2.png", "Arrow Keys to move"],
+    ["misc/key-2.png", "Arrow/WASD Keys to move"],
     ["misc/key-3.png", "Space to fire lazer"]
 ]
 
@@ -1618,9 +1611,9 @@ powerUpTypes = [Heal, OneUp, Bomb, WingUp]
 # Testing the turret on the premature. Does the logic work??
 def turretTest():
     dummy = dummySprite()
-    prema_1 = Premature_1(dummy, 3, allSprites)
+    prema_1 = Premature_1(dummy, 3, miscSprites)
 
-    allSprites.add(dummy)
+    miscSprites.add(dummy)
 
     prema_1.body.rect.center = screen.get_rect().center
     dummy.rect.topleft = (screen.get_width() - 30, 30)
@@ -2109,16 +2102,11 @@ def startScreen():
                     pygame.quit()
                     exit()
                 elif options[opIndex] == indev:
-                    tmp = Player("cobra")
-                    tmp.levelIndex = 1
-
-                    briefingRoom(tmp, True)
                     startScreen()
                     exit()
                 else:
                     startScreen()
                     exit()
-
 
         cursor.rect.midright = options[opIndex].rect.midleft
         cursor.blink()
@@ -2332,20 +2320,47 @@ def creditsScreen(p1):
         clock.tick(30)
         count += 1
 
+def pauseGame():
+
+    pygame.mixer.music.pause()
+
+    bg = pygame.Surface(screen.get_size())
+    bg.fill(BLACK)
+    bg.set_alpha(150)
+
+    screen.blit(bg, (0, 0))
+    pygame.display.update()
+
+    fnt = pygame.font.Font("fonts/SolomonsKey.ttf", 70)
+    subfnt = pygame.font.Font("fonts/windows_command_prompt.ttf", 25)
+
+    title = Text("Paused", fnt, GREEN, shadow=True)
+    subtitle = Text("Press anything to continue", subfnt, WHITE, shadow=True)
+
+    title.rect.center = screen.get_rect().center
+    subtitle.rect.midtop = title.rect.midbottom
+
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                exit()
+            elif event.type == pygame.KEYDOWN:
+                pygame.mixer.music.unpause()
+                return
+
+        screen.blit(title.image, title.rect)
+        screen.blit(subtitle.image, subtitle.rect)
+
+        pygame.display.update()
+        clock.tick(15)
+
 # The main mechanics of the game.
 def main(level, p1):
-    for sprite in sporeGroup.sprites():
-        sprite.kill()
+    # rewrite this to make it more efficient and time saving
     for sprite in allSprites.sprites():
         sprite.kill()
-    for sprite in healthBarGroup.sprites():
-        sprite.kill()
-    for sprite in playerGroup.sprites():
-        sprite.kill()
-    for sprite in allClouds.sprites():
-        sprite.kill()
-    for sprite in wingmanGroup.sprites():
-        sprite.kill()
+    #------------------------------------------------------#
 
     level.speed = level.min_speed
     level.waveIndex = 0
@@ -2353,12 +2368,14 @@ def main(level, p1):
 
     p1.rect.center = screen.get_rect().center
     playerGroup.add(p1)
+    miscSprites.add(p1)
     allSprites.add(p1)
 
     prema = level.boss(p1, 3, health=level.boss_health, legs=level.boss_legs, lazertype=level.boss_lazer1, gunMode=level.limbGuns)
 
     healthBar = HealthBar(p1)
     healthBarGroup.add(healthBar)
+    allSprites.add(healthBar)
 
 
     font = pygame.font.Font("fonts/planet_joust_ownjx.otf", 50)
@@ -2391,6 +2408,8 @@ def main(level, p1):
                 cloudsGroup2.add(tmp)
             else:
                 cloudsGroup1.add(tmp)
+
+            allSprites.add(tmp)
             allClouds.add(tmp)
 
     shade_layer = pygame.Surface(screen.get_size())
@@ -2435,7 +2454,9 @@ def main(level, p1):
                 if bossDead and event.key == K_RETURN:
                     count = FPS*41
                     break
-
+                if event.key == K_ESCAPE:
+                    pauseGame()
+                    break
 
         playerPoints = Text(str(p1.points), pointFont, WHITE, shadow=True)
         playerPoints.rect.midtop = pointsTitle.rect.midbottom
@@ -2468,21 +2489,23 @@ def main(level, p1):
 
                             healthBarGroup.add(spore.healthbar)
                             sporeGroup.add(spore.body)
+
+                            allSprites.add(spore.healthbar, spore.body)
+
                             if spore.body.armor != None:
                                 sporeGroup.add(spore.body.armor)
+                                allSprites.add(spore.body.armor)
                             for i in (spore.lig_left + spore.lig_right):
                                 sporeGroup.add(i)
+                                allSprites.add(i)
                                 if i.armor != None:
                                     sporeGroup.add(i.armor)
-                            """
-                            if hasattr(spore, "armor"):
-                                for i in spore.armor:
-                                    print("adding armor")
-                                    sporeGroup.add(i)
-                            """
+                                    allSprites.add(i.armor)
+
                     else:
                         spore = sporeObj(p1)
                         sporeGroup.add(spore)
+                        miscSprites.add(spore)
                         allSprites.add(spore)
 
             if count % (7 * FPS) == 0:
@@ -2494,6 +2517,7 @@ def main(level, p1):
 
                 if not pygame.sprite.spritecollideany(pUp, powerUpGroup):
                     powerUpGroup.add(pUp)
+                    allSprites.add(pUp)
         else:
             if prema.body.health <= 0 and not bossDead:
                 pygame.mixer.music.load("BGM/complete.ogg")
@@ -2501,6 +2525,7 @@ def main(level, p1):
 
                 exp = Explosion(explosion, 3, 0.25, prema.body.rect.center, False, "SFX/ship-explosion.wav")
                 bgGroup.add(exp)
+                allSprites.add(exp)
 
                 for spore in sporeGroup.sprites():
                     spore.kill()
@@ -2527,19 +2552,11 @@ def main(level, p1):
                 p1.rect.midbottom = screen.get_rect().midbottom
                 p1.bombs = 5
                 playerGroup.add(p1)
+                miscSprites.add(p1)
                 allSprites.add(p1)
             else:
-                for sprite in sporeGroup.sprites():
-                    sprite.kill()
                 for sprite in allSprites.sprites():
                     sprite.kill()
-                for sprite in healthBarGroup.sprites():
-                    sprite.kill()
-                for sprite in playerGroup.sprites():
-                    sprite.kill()
-                for sprite in allClouds.sprites():
-                    sprite.kill()
-
                 gameOver()
 
 
@@ -2549,15 +2566,7 @@ def main(level, p1):
             p1.lives = 3
             p1.bombs = 5
 
-            for sprite in sporeGroup.sprites():
-                sprite.kill()
             for sprite in allSprites.sprites():
-                sprite.kill()
-            for sprite in healthBarGroup.sprites():
-                sprite.kill()
-            for sprite in playerGroup.sprites():
-                sprite.kill()
-            for sprite in allClouds.sprites():
                 sprite.kill()
 
             if p1.levelIndex < len(levels) - 1:
@@ -2661,18 +2670,19 @@ def main(level, p1):
 
             if count > FPS*11:
                 sporeGroup.add(prema.body)
+                allSprites.add(prema.body)
                 if prema.body.armor != None:
                     sporeGroup.add(prema.body.armor)
+                    allSprites.add(prema.body.armor)
+
                 healthBarGroup.add(prema.healthbar)
+                allSprites.add(prema.healthbar)
                 for p in prema.lig_left + prema.lig_right:
                     sporeGroup.add(p)
+                    allSprites.add(p)
                     if p.armor != None:
                         sporeGroup.add(p.armor)
-                """
-                if hasattr(prema, "armor"):
-                    for a in prema.armor:
-                        sporeGroup.add(a)
-                """
+                        allSprites.add(p.armor)
 
                 count = 0
                 bossMode = True

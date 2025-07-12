@@ -131,7 +131,6 @@
         ["Spore_5", "Spore_3", "Spore_1", "Spore_2"],
         ["Spore_4", "Spore_4", "Spore_4", "Spore_1", "Spore_1", "Spore_1", "Spore_5", "Spore_5", "Spore_5"],
         ["Spore_1", "Spore_2"]
-
       ],
       "briefing": [
         "\\C L A S S I F I E D           M I S S I O N^",
@@ -192,7 +191,6 @@
       "speed": 5
     }
   },
-
   "__comments": [
     ["Spore_1", "Spore_2"],
     ["Spore_1", "Spore_4", "Spore_1", "Spore_4", "Spore_1", "Spore_2"],
