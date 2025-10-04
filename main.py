@@ -497,7 +497,7 @@ class Gun(pygame.sprite.Sprite):
         tmp.sender = self.sender
         tmp.oppGroup = self.oppGroup
 
-        fireGroup.add(exp. tmp)
+        fireGroup.add(exp, tmp)
         allSprites.add(exp, tmp)
 
     def rotate(self):
@@ -1585,7 +1585,7 @@ def readVideo(file, window=None, threshold=-1, colorKey=WHITE, MaxFrames=-1, fra
 # Load the explosion gif
 explosion = readVideo("misc/explosion.gif")
 
-# Load all the levels form the gameData.json file
+# Load all the levels from the gameData.json file
 levels = [Level(levelName) for levelName in gameData.get("levels")]
 
 # Load sfx for clicking
@@ -1605,52 +1605,9 @@ keymapping = [
     ["misc/key-3.png", "Space to fire lazer"]
 ]
 
-# define different types fo powerups
+# define different types of powerups
 powerUpTypes = [Heal, OneUp, Bomb, WingUp]
 
-# Testing the turret on the premature. Does the logic work??
-def turretTest():
-    dummy = dummySprite()
-    prema_1 = Premature_1(dummy, 3, miscSprites)
-
-    miscSprites.add(dummy)
-
-    prema_1.body.rect.center = screen.get_rect().center
-    dummy.rect.topleft = (screen.get_width() - 30, 30)
-
-    while True:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                exit()
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_RETURN:
-                    for sprite in fireGroup:
-                        sprite.kill()
-                    startScreen()
-                    exit()
-
-        keys = pygame.key.get_pressed()
-        if keys[K_DOWN]:
-            prema_1.body.health -= 1
-        if keys[K_UP]:
-            prema_1.body.health += 1
-
-
-        dummy.update()
-        prema_1.update()
-        fireGroup.update()
-        sporeGroup.update()
-
-        screen.fill(BLACK)
-        prema_1.draw(screen)
-        fireGroup.draw(screen)
-        prema_1.draw_gun(screen)
-        sporeGroup.draw(screen)
-        screen.blit(dummy.image, dummy.rect)
-
-        pygame.display.update()
-        clock.tick(30)
 
 # print a loading screen, mostly used when loading gifs.
 def printLoadingScreen():
@@ -1721,6 +1678,92 @@ def showKeyMapping():
         timer -= 1
         pygame.display.update()
         clock.tick(30)
+
+# Text roll for intro
+def textrollScreen(file="prologue.txt", col=(255, 255, 255), fnt="fonts/SolomonsKey.ttf", size=50):
+    pygame.mixer.music.stop()
+    pygame.mixer.music.load("songs/startups/intro.ogg")
+    pygame.mixer.music.set_volume(0.25)
+    pygame.mixer.music.play()
+
+    #pic = []
+    mount = (screen.get_width()//2, screen.get_height()//3)
+
+    """
+    for bg in images:
+        img = pygame.transform.scale(pygame.image.load(bg), (screen.get_width() * 3//4, screen.get_height()//3))
+        pic.append(img)
+
+    rect = pic[0].get_rect()
+    rect.center = mount
+    """
+
+    with open(f"files/{file}", "r") as f:
+        buff = f.read()
+        f.close()
+
+    segments = buff.replace('\r\n', '').split('::')
+    font = pygame.font.Font(fnt, size)
+
+    lineGrp = []
+    timer = 0
+    index = 0
+
+    alphaVal = 1
+    bgAlpha = 1
+    inc_bgAlpha = 1
+    inc = 2
+    picIndex = 0
+
+    for i, seg in enumerate(segments):
+        parag = seg.split('<<nl<<')
+        print(f"{seg}: {parag}")
+        tmpArr = []
+        for line in parag:
+            tmpArr.append(Text(line, font, col))
+        i += 1
+        lineGrp.append(tmpArr)
+
+    while index < len(lineGrp):
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                exit()
+            if event.type == KEYDOWN and debug:
+                pygame.mixer.music.stop()
+                return
+
+        #if picIndex > len(pic) - 1:
+        #    picIndex = 0
+
+        #bg = pic[picIndex]
+        #bg.set_alpha(bgAlpha)
+
+        screen.fill(BLACK)
+        #screen.blit(bg, rect)
+
+        for line in lineGrp[index]:
+            line.image.set_alpha(alphaVal)
+            line.rect.center = (screen.get_rect().centerx, lineGrp[index].index(line) * size + screen.get_height() * 7//12)
+            screen.blit(line.image, line.rect)
+
+        if timer % 255 == 0 and timer > 0:
+            index += 1
+        #if timer % 510 == 0 and timer > 0:
+        #    picIndex += 1
+
+        if alphaVal >= 255 or alphaVal <= 0:
+            inc *= -1
+
+        if bgAlpha >= 255 or bgAlpha <= 0:
+            inc_bgAlpha *= -1
+
+        drawScanlines(1, 200, screen)
+        pygame.display.update()
+        clock.tick(30)
+        timer += 1
+        alphaVal += inc
+        bgAlpha += inc_bgAlpha
 
 # Mission briefing...
 def briefingRoom(player, advance=False):
@@ -2102,7 +2145,9 @@ def startScreen():
                     pygame.quit()
                     exit()
                 elif options[opIndex] == indev:
-                    startScreen()
+                    p = Player("avalanche")
+                    p.levelIndex = 3
+                    briefingRoom(p, False)
                     exit()
                 else:
                     startScreen()
